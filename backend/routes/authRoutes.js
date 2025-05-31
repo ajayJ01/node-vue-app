@@ -1,11 +1,17 @@
 const authController = require('../controllers/authController');
 const authenticate = require('../middlewares/authMiddleware');
+const userValidation = require('../validations/UserValidation.js');
+
 
 async function authRoutes(fastify, options) {
-    fastify.post('/api/register', authController.registerUser);
-    fastify.post('/api/login', authController.loginUser);
+    fastify.post('/register', { schema: userValidation.register }, authController.registerUser)
+    fastify.post('/login', { schema: userValidation.login }, authController.loginUser);
 
-    fastify.get('/api/me', { preHandler: authenticate }, authController.getProfile);
+    // ✅ Protected routes group with prefix and middleware
+    fastify.register(async function (protectedRoutes) {
+        protectedRoutes.addHook('preHandler', authenticate)
+        protectedRoutes.get('/me', authController.getProfile)
+    })
 }
 
 module.exports = authRoutes;
