@@ -1,34 +1,51 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const { success, error, validationError } = require('../utils/response');
 
 exports.registerUser = async (req, reply) => {
-    const { name, email, password } = req.body;
+    try {
+        const { name, email, password } = req.body;
 
-    const userExists = await User.findOne({ email });
-    if (userExists) return reply.code(400).send({ message: 'User already exists' });
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            return error(reply, 400, 'User already exists with this email');
+        }
 
-    const user = await User.create({ name, email, password });
-    reply.send({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id),
-    });
-};
+        const user = await User.create({ name, email, password });
 
-exports.loginUser = async (req, reply) => {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
-        reply.send({
+        return success(reply, 'User registered successfully', {
             _id: user._id,
             name: user.name,
             email: user.email,
             token: generateToken(user._id),
         });
-    } else {
-        reply.code(401).send({ message: 'Invalid email or password' });
+
+    } catch (err) {
+        console.error('Registration Error:', err.message);
+        return error(reply);
+    }
+};
+
+
+exports.loginUser = async (req, reply) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+
+        if (user && (await user.matchPassword(password))) {
+            return success(reply, 'Logged In Successfully', {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                token: generateToken(user._id),
+            });
+        } else {
+            return error(reply, 401, 'Invalid email or password');
+        }
+
+    } catch (err) {
+        console.error('Login error:', err);
+        return error(reply);
     }
 };
 
