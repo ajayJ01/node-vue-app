@@ -1,12 +1,18 @@
 <template>
-  <Navbar />
   <router-view />
 </template>
 
 <script setup>
-import Navbar from './components/Navbar.vue'
 </script>
 
 <style scoped>  
-/* Optional: your styles here */
+body {
+  background-color: #f8f9fa;
+}
+
+.nav-link.active {
+  background-color: #0d6efd;
+  border-radius: 5px;
+  font-weight: bold;
+}
 </style>

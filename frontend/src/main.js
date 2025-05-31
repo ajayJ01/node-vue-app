@@ -3,9 +3,19 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import App from './App.vue'
 import router from './router'
 import { createPinia } from 'pinia'
+import ToastPlugin from 'vue-toast-notification'
+import 'vue-toast-notification/dist/theme-bootstrap.css'
+
+const toastOptions = {
+  position: 'top-right',
+  duration: 3000,
+  dismissible: true
+}
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+app.use(ToastPlugin, toastOptions)
+
 app.mount('#app')
