@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { ref, getCurrentInstance } from 'vue'
+import { ref, getCurrentInstance, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '@/services/apiWrapper'
 
@@ -45,6 +45,14 @@ const router = useRouter()
 const { appContext } = getCurrentInstance()
 const toast = appContext.config.globalProperties.$toast
 
+onMounted(() => {
+  const logout = localStorage.getItem("logout");
+  if (logout) {
+    toast.success(logout);
+    localStorage.removeItem("logout");
+  }
+})
+
 const handleLogin = async () => {
   try {
     const [data, error] = await request('post', '/login', {
@@ -53,23 +61,21 @@ const handleLogin = async () => {
     })
 
     if (error) {
-      // If validation error get(field-wise)
-      if (Object.keys(error.errors).length > 0) {
+      if (error.errors && Object.keys(error.errors).length > 0) {
         for (const [field, msg] of Object.entries(error.errors)) {
           toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${msg}`)
         }
       } else {
-        // Otherwise generic error message
         toast.error(error.message)
       }
     } else {
       localStorage.setItem('token', data.data.token)
-      toast.success(data.message)
+      localStorage.setItem('loggedIn', data.data.message)
+      localStorage.setItem('role', data.data.role)
       router.push('/dashboard')
     }
   } catch (err) {
     toast.error('Unexpected error occurred. Please try again later.')
   }
 }
-
 </script>

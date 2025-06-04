@@ -8,27 +8,36 @@
       </div>
 
       <form @submit.prevent="handleRegister">
-        <div class="form-floating mb-3">
-          <input v-model="name" type="text" class="form-control" id="floatingName" placeholder="John Doe" required />
-          <label for="floatingName">Full Name</label>
-        </div>
+  <div class="form-floating mb-3">
+    <input v-model="name" type="text" class="form-control" id="floatingName" placeholder="John Doe" required />
+    <label for="floatingName">Full Name</label>
+  </div>
 
-        <div class="form-floating mb-3">
-          <input v-model="email" type="email" class="form-control" id="floatingEmail" placeholder="name@example.com"
-            required />
-          <label for="floatingEmail">Email address</label>
-        </div>
+  <div class="form-floating mb-3">
+    <input v-model="email" type="email" class="form-control" id="floatingEmail" placeholder="name@example.com" required />
+    <label for="floatingEmail">Email address</label>
+  </div>
 
-        <div class="form-floating mb-3">
-          <input v-model="password" type="password" class="form-control" id="floatingPassword" placeholder="Password"
-            required />
-          <label for="floatingPassword">Password</label>
-        </div>
+  <div class="form-floating mb-3">
+    <input v-model="password" type="password" class="form-control" id="floatingPassword" placeholder="Password" required />
+    <label for="floatingPassword">Password</label>
+  </div>
 
-        <button type="submit" class="btn btn-success w-100 py-2 shadow-sm">
-          <i class="bi bi-check-circle me-2"></i>Register
-        </button>
-      </form>
+  <!-- ✅ Role dropdown -->
+  <div class="form-floating mb-4">
+    <select v-model="role" class="form-select" id="floatingRole" required>
+      <option disabled value="">Select a role</option>
+      <option value="admin">Admin</option>
+      <option value="user">User</option>
+    </select>
+    <label for="floatingRole">Role</label>
+  </div>
+
+  <button type="submit" class="btn btn-success w-100 py-2 shadow-sm">
+    <i class="bi bi-check-circle me-2"></i>Register
+  </button>
+</form>
+
 
       <p class="text-center mt-4 mb-0">
         Already have an account?
@@ -46,28 +55,23 @@ import { request } from '@/services/apiWrapper' // wrapper ka use
 const name = ref('')
 const email = ref('')
 const password = ref('')
-const router = useRouter()
-
-// Toast access
-const { appContext } = getCurrentInstance()
-const toast = appContext.config.globalProperties.$toast
+const role = ref('') // ✅ add this
 
 const handleRegister = async () => {
   try {
     const [data, error] = await request('post', '/register', {
       name: name.value,
       email: email.value,
-      password: password.value
+      password: password.value,
+      role: role.value // ✅ include role in request
     })
 
     if (error) {
-      // If validation error get(field-wise)
       if (Object.keys(error.errors).length > 0) {
         for (const [field, msg] of Object.entries(error.errors)) {
           toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${msg}`)
         }
       } else {
-        // Otherwise generic error message
         toast.error(error.message)
       }
     } else {
@@ -78,4 +82,5 @@ const handleRegister = async () => {
     toast.error('Unexpected error occurred. Please try again later.')
   }
 }
+
 </script>
