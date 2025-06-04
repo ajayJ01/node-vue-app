@@ -70,7 +70,8 @@ const handleLogin = async () => {
       }
     } else {
       localStorage.setItem('token', data.data.token)
-      localStorage.setItem('loggedIn', data.data.message)
+      localStorage.setItem('userName', data.data.name)
+      localStorage.setItem('loggedInSuccessMsg', data.message)
       localStorage.setItem('role', data.data.role)
       router.push('/dashboard')
     }

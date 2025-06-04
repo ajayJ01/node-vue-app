@@ -24,6 +24,12 @@
                         <i class="bi bi-plus-circle me-2"></i> Create Task
                     </RouterLink>
                 </li>
+                <li class="nav-item">
+                    <RouterLink to="/dashboard/tasks/create" class="nav-link"
+                        :class="{ active: isActive('/dashboard/tasks/create') }">
+                        <i class="bi bi-plus-circle me-2"></i> Create Task
+                    </RouterLink>
+                </li>
             </ul>
         </aside>
 

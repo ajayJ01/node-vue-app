@@ -12,7 +12,6 @@ import TaskEdit from '../views/TaskEdit.vue'
 const routes = [
   { path: '/', redirect: '/dashboard' },
   { path: '/login', component: Login },
-  { path: '/register', component: Register },
   {
     path: '/dashboard',
     meta: { requiresAuth: true },
@@ -25,12 +24,23 @@ const routes = [
   },
   {
     path: '/tasks',
-    component: MainLayout,
-    meta: { requiresAuth: true, requiresAdmin: true }, // admin only
+    component: AdminDashboard,
+    meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       { path: '', component: TaskList },
       { path: 'create', component: TaskCreate },
-      { path: 'tasks/:id/edit', component: TaskEdit },
+      { path: ':id/edit', component: TaskEdit }
+    ]
+  },
+  {
+    path: '/user/create',
+    component: AdminDashboard,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: '',
+        component: Register
+      }
     ]
   }
 ]

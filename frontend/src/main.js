@@ -9,7 +9,9 @@ import 'vue-toast-notification/dist/theme-bootstrap.css'
 const toastOptions = {
   position: 'top-right',
   duration: 3000,
-  dismissible: true
+  dismissible: true,
+  pauseOnHover: true,
+  queue: false,
 }
 
 const app = createApp(App)

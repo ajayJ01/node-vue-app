@@ -4,19 +4,20 @@ const { success, error, validationError } = require('../utils/response');
 
 exports.registerUser = async (req, reply) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, role } = req.body;
 
         const userExists = await User.findOne({ email });
         if (userExists) {
             return error(reply, 400, 'User already exists with this email');
         }
 
-        const user = await User.create({ name, email, password });
+        const user = await User.create({ name, email, password, role });
 
         return success(reply, 'User registered successfully', {
             _id: user._id,
             name: user.name,
             email: user.email,
+            role: user.role,
             token: generateToken(user._id),
         });
 

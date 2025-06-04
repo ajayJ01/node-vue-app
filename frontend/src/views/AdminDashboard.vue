@@ -3,63 +3,79 @@
     <!-- Top navbar -->
     <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm">
       <h4 class="mb-0 text-primary fw-bold">Dashboard</h4>
-      <button @click="logout" class="btn btn-outline-danger">
-        <i class="bi bi-box-arrow-right me-1"></i> Logout
-      </button>
+      <span class="text-dark fw-semibold">
+        👋 Hello, {{ userName }}
+      </span>
     </div>
 
     <div class="row flex-grow-1">
       <!-- Sidebar -->
-      <div class="col-md-3 col-lg-2 bg-white shadow-sm p-3">
-        <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-kanban me-2"></i>Task Manager</h5>
-        <ul class="nav flex-column">
-          <li class="nav-item mb-2">
-            <RouterLink to="/dashboard" class="nav-link text-dark" active-class="fw-bold text-primary">
-              <i class="bi bi-speedometer2 me-2"></i>Dashboard
-            </RouterLink>
-          </li>
-          <li class="nav-item mb-2">
-            <RouterLink to="/tasks" class="nav-link text-dark" active-class="fw-bold text-primary">
-              <i class="bi bi-list-check me-2"></i>All Tasks
-            </RouterLink>
-          </li>
-          <li class="nav-item">
-            <RouterLink to="/tasks/create" class="nav-link text-dark" active-class="fw-bold text-primary">
-              <i class="bi bi-plus-circle me-2"></i>Create Task
-            </RouterLink>
-          </li>
-        </ul>
+      <!-- Sidebar -->
+      <div class="col-md-3 col-lg-2 bg-white p-4 shadow-sm d-flex flex-column justify-content-between sidebar-modern">
+        <div>
+          <h5 class="text-dark fw-semibold mb-4 d-flex align-items-center">
+            <i class="bi bi-kanban me-2 fs-5 text-primary"></i> Task Manager
+          </h5>
+          <ul class="nav flex-column gap-2">
+            <li class="nav-item">
+              <RouterLink to="/dashboard" class="nav-link nav-modern" active-class="active-modern">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+              </RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink to="/tasks" class="nav-link nav-modern" active-class="active-modern">
+                <i class="bi bi-list-task me-2"></i>All Tasks
+              </RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink to="/tasks/create" class="nav-link nav-modern" active-class="active-modern">
+                <i class="bi bi-journal-plus me-2"></i>Create Task
+              </RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink to="/user/create" class="nav-link nav-modern" active-class="active-modern">
+                <i class="bi bi-person-plus me-2"></i>Create User
+              </RouterLink>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-4 border-top pt-3">
+          <button @click="logout"
+            class="btn btn-light border w-100 text-danger fw-semibold d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-box-arrow-right"></i> Logout
+          </button>
+        </div>
       </div>
 
       <!-- Main content -->
       <div class="col p-4">
-        <div class="card border-0 shadow-sm rounded-4">
-          <div class="card-body">
-            <h4 class="fw-semibold mb-3">Task List</h4>
-            <RouterLink to="/tasks/create" class="btn btn-primary mb-3">
-              <i class="bi bi-plus-circle me-1"></i> Create Task
-            </RouterLink>
-
-            <!-- Placeholder or slot for task list -->
-            <p class="text-muted">You don't have any tasks yet.</p>
-          </div>
-        </div>
+        <router-view />
       </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+const userName = ref('')
+import { useToast } from '@/composables/useToast'
+const toast = useToast()
 
 const router = useRouter()
-// onMounted(() => {
-//   const loggedIn = localStorage.getItem("loggedIn");
-//   if (loggedIn) {
-//     toast.success(logout);
-//     localStorage.removeItem("loggedIn");
-//   }
-// })
+onMounted(() => {
+  const loggedIn = localStorage.getItem("loggedInSuccessMsg");
+  const name = localStorage.getItem("userName")
+  if (name) userName.value = name
+
+  if (loggedIn) {
+    toast.success(loggedIn);
+    localStorage.removeItem("loggedInSuccessMsg");
+  }
+})
+
 const logout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('role')
@@ -67,3 +83,32 @@ const logout = () => {
   router.push('/login')
 }
 </script>
+
+<style>
+.sidebar-modern {
+  border-radius: 12px;
+  background-color: #fff;
+}
+
+.nav-modern {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #333;
+  font-weight: 500;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.nav-modern:hover {
+  background-color: #f1f5f9;
+  color: #0d6efd;
+}
+
+.active-modern {
+  background-color: #e0f0ff;
+  color: #0d6efd !important;
+  font-weight: 600;
+  border-left: 4px solid #0d6efd;
+}
+</style>
