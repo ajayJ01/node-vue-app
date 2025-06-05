@@ -1,42 +1,58 @@
-const Task = require('../models/Task');
-const { success, error, validationError } = require('../utils/response');
+const Task = require("../models/Task");
+const { success, error, validationError } = require("../utils/response");
 
 exports.createTask = async (req, reply) => {
-    try {
-        const { title, description, dueDate, assignedTo } = req.body;
+  try {
+    const { title, description, dueDate, assignedTo } = req.body;
+    const assignedList = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
 
-        // Check if all required fields are provided
-        if (!title || !description || !dueDate || !assignedTo) {
-            return error(reply, 400, 'All fields are required');
-        }
+    const tasks = await Promise.all(
+      assignedList.map((userId) =>
+        Task.create({
+          title,
+          description,
+          dueDate,
+          assignedTo: userId,
+          createdBy: req.user.id,
+        })
+      )
+    );
 
-        // If assignedTo is an array, create a task per user
-        const tasks = Array.isArray(assignedTo)
-            ? await Promise.all(
-                assignedTo.map(userId =>
-                    Task.create({
-                        title,
-                        description,
-                        dueDate,
-                        assignedTo: userId,
-                        createdBy: req.user._id  // assuming you have middleware for setting req.user
-                    })
-                )
-            )
-            : [
-                await Task.create({
-                    title,
-                    description,
-                    dueDate,
-                    assignedTo,
-                    createdBy: req.user._id
-                })
-            ];
+    return success(reply, "Task created & assigned successfully", tasks);
+  } catch (err) {
+    console.error("Task Creation Error:", err);
+    return error(reply);
+  }
+};
 
-        return success(reply, 'Task(s) created successfully', tasks);
+exports.getAllTasks = async (req, reply) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    } catch (err) {
-        console.error('Task Creation Error:', err.message);
-        return error(reply);
-    }
+    const filter = {
+      $or: [{ createdBy: userId }, { assignedTo: userId }],
+    };
+
+    const totalCount = await Task.countDocuments(filter);
+
+    const tasks = await Task.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
+
+    return success(reply, "Tasks fetched successfully", {
+      tasks,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+      totalCount,
+    });
+  } catch (err) {
+    console.error("Fetch Tasks Error:", err);
+    return error(reply);
+  }
 };

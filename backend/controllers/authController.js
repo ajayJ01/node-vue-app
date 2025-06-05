@@ -62,7 +62,7 @@ exports.getProfile = async (req, reply) => {
 exports.getAllNormalUsers = async (req, reply) => {
     try {
         const users = await User.find({ role: 'user' }).select('-password');
-
+        console.log(users)
         return success(reply, 'Users fetched successfully', users);
     } catch (err) {
         console.error('Get Users Error:', err.message);

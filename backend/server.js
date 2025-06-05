@@ -20,6 +20,7 @@ fastify.get('/', async (req, reply) => {
 });
 
 fastify.register(require('./routes/authRoutes'));
+fastify.register(require('./routes/taskRoutes'));
 
 fastify.setErrorHandler((error, request, reply) => {
     if (error.validation) {
