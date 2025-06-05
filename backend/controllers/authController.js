@@ -58,3 +58,14 @@ exports.getProfile = async (req, reply) => {
         reply.code(500).send({ message: 'Server Error' });
     }
 };
+
+exports.getAllNormalUsers = async (req, reply) => {
+    try {
+        const users = await User.find({ role: 'user' }).select('-password');
+
+        return success(reply, 'Users fetched successfully', users);
+    } catch (err) {
+        console.error('Get Users Error:', err.message);
+        return error(reply);
+    }
+};

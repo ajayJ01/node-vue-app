@@ -25,10 +25,6 @@
         </button>
       </form>
 
-      <p class="text-center mt-4 mb-0">
-        Don’t have an account?
-        <RouterLink to="/register" class="text-decoration-none text-primary">Register here</RouterLink>
-      </p>
     </div>
   </div>
 </template>
