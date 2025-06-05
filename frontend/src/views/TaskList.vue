@@ -26,7 +26,7 @@
               </div>
 
               <div class="form-floating mb-3">
-                <input v-model="dueDate" type="date" class="form-control" id="floatingDueDate" required />
+                <input v-model="dueDate" type="datetime-local" class="form-control" id="floatingDueDate" required />
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Task List Card -->
-    <div class="card shadow-sm rounded-4 border-0 p-4" style="width: 100%; max-width: 960px;">
+    <div class="card shadow-sm rounded-4 border-0 p-4" style="width: 100%; max-width: 960px">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0 text-primary"><i class="bi bi-list-check me-2"></i>Task List</h4>
         <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createTaskModal">
@@ -71,17 +71,22 @@
               <td>{{ task.description }}</td>
               <td>{{ formatDate(task.dueDate) }}</td>
               <td>
-                <span v-for="(user, idx) in task.assignedUsers" :key="user._id">
-                  {{ user.name }}<span v-if="idx < task.assignedUsers.length - 1">, </span>
+                <span v-if="Array.isArray(task.assignedTo)">
+                  <span v-for="(user, idx) in task.assignedTo" :key="user._id">
+                    {{ user.name }}<span v-if="idx < task.assignedTo.length - 1">, </span>
+                  </span>
+                </span>
+                <span v-else>
+                  {{ task.assignedTo?.name || '—' }}
                 </span>
               </td>
               <td>
                 <span :class="{
                   'badge bg-success': task.status === 'completed',
                   'badge bg-warning text-dark': task.status === 'pending',
-                  'badge bg-secondary': !task.status
+                  'badge bg-secondary': !task.status,
                 }">
-                  {{ task.status || 'Pending' }}
+                  {{ task.status || "Pending" }}
                 </span>
               </td>
             </tr>
@@ -111,101 +116,104 @@
 </template>
 
 <script setup>
-import { ref, onMounted, getCurrentInstance } from 'vue'
-import { request } from '@/services/apiWrapper'
-import * as bootstrap from 'bootstrap'
-import Multiselect from 'vue-multiselect'
-import 'vue-multiselect/dist/vue-multiselect.css'
+import { ref, onMounted, getCurrentInstance, nextTick } from "vue";
+import { request } from "@/services/apiWrapper";
+import * as bootstrap from "bootstrap";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.css";
+import { hideBootstrapModal } from "@/utils/bootstrapModal";
 
 // define component
 defineOptions({
-  components: { Multiselect }
-})
-const customLabel = (user) => `${user.name} (${user.email})`
+  components: { Multiselect },
+});
+const customLabel = (user) => `${user.name} (${user.email})`;
 
-const title = ref('')
-const description = ref('')
-const dueDate = ref('')
-const assignedTo = ref([])
-const users = ref([])
-const resetKey = ref(0)
+const title = ref("");
+const description = ref("");
+const dueDate = ref("");
+const assignedTo = ref([]);
+const users = ref([]);
+const resetKey = ref(0);
 
-const tasks = ref([])
-const currentPage = ref(1)
-const totalPages = ref(1)
-const perPage = 10
+const tasks = ref([]);
+const currentPage = ref(1);
+const totalPages = ref(1);
+const perPage = 10;
 
-const createTaskModal = ref(null)
-const { appContext } = getCurrentInstance()
-const toast = appContext.config.globalProperties.$toast
+const createTaskModal = ref(null);
+const { appContext } = getCurrentInstance();
+const toast = appContext.config.globalProperties.$toast;
 
 const fetchTasks = async (page = 1) => {
-  const [data, error] = await request('get', `/tasks?page=${page}&limit=${perPage}`)
+  const [data, error] = await request("get", `/tasks?page=${page}&limit=${perPage}`);
   if (error) {
-    toast.error(error.message || 'Failed to load tasks')
+    toast.error(error.message || "Failed to load tasks");
   } else {
-    tasks.value = data.tasks || []
-    totalPages.value = data.totalPages || 1
-    currentPage.value = page
+    console.log(data);
+    tasks.value = data.data.tasks || [];
+    totalPages.value = data.data.totalPages || 1;
+    currentPage.value = data;
   }
-}
+};
 
 const changePage = (page) => {
-  if (page < 1 || page > totalPages.value) return
-  fetchTasks(page)
-}
+  if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+    currentPage.value = page;
+    fetchTasks(page);
+  }
+};
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const d = new Date(dateStr)
-  return d.toLocaleDateString()
-}
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString();
+};
 
 const handleTaskCreate = async () => {
-  const [data, error] = await request('post', '/tasks/create', {
+  let isoDueDate = new Date(dueDate.value).toISOString();
+
+  const [data, error] = await request("post", "/tasks/create", {
     title: title.value,
     description: description.value,
-    dueDate: dueDate.value,
-    assignedTo: assignedTo.value.map(user => user._id)
-  })
+    dueDate: isoDueDate,
+    assignedTo: assignedTo.value.map((user) => user._id),
+  });
 
   if (error) {
-    toast.error(error.message || 'Failed to create task')
+    if (error.errors && Object.keys(error.errors).length > 0) {
+      for (const [field, msg] of Object.entries(error.errors)) {
+        toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${msg}`);
+      }
+    } else {
+      toast.error(error.message);
+    }
   } else {
-    toast.success(data.message || 'Task created successfully!')
-    title.value = ''
-    description.value = ''
-    dueDate.value = ''
-    assignedTo.value = [users.value[0], users.value[2]]
-    resetKey.value++
-    fetchTasks()
+    toast.success(data.message || "Task created successfully!");
+    title.value = "";
+    description.value = "";
+    dueDate.value = "";
+    assignedTo.value = [users.value[0], users.value[2]];
+    resetKey.value++;
 
-    const modalInstance = bootstrap.Modal.getInstance(createTaskModal.value) || new bootstrap.Modal(createTaskModal.value)
-    modalInstance.hide()
+    fetchTasks();
+    await nextTick();
+    hideBootstrapModal(createTaskModal);
   }
-}
+};
 
 onMounted(async () => {
-  await fetchTasks()
+  await fetchTasks();
 
-  const [data, error] = await request('get', '/users')
+  const [data, error] = await request("get", "/users");
   if (!error) {
-    users.value = data.data
+    users.value = data.data;
   }
 
   if (createTaskModal.value) {
-    new bootstrap.Modal(createTaskModal.value)
+    new bootstrap.Modal(createTaskModal.value);
   }
-})
+});
 </script>
 
-<style scoped>
-.table td,
-.table th {
-  vertical-align: middle;
-}
-
-.table th {
-  white-space: nowrap;
-}
-</style>
+<style scoped></style>

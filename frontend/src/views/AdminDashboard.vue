@@ -3,13 +3,10 @@
     <!-- Top navbar -->
     <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm">
       <h4 class="mb-0 text-primary fw-bold">Dashboard</h4>
-      <span class="text-dark fw-semibold">
-        👋 Hello, {{ userName }}
-      </span>
+      <span class="text-dark fw-semibold"> 👋 Hello, {{ userName }} </span>
     </div>
 
     <div class="row flex-grow-1">
-      <!-- Sidebar -->
       <!-- Sidebar -->
       <div class="col-md-3 col-lg-2 bg-white p-4 shadow-sm d-flex flex-column justify-content-between sidebar-modern">
         <div>
@@ -25,11 +22,6 @@
             <li class="nav-item">
               <RouterLink to="/tasks" class="nav-link nav-modern" active-class="active-modern">
                 <i class="bi bi-list-task me-2"></i>All Tasks
-              </RouterLink>
-            </li>
-            <li class="nav-item">
-              <RouterLink to="/tasks/create" class="nav-link nav-modern" active-class="active-modern">
-                <i class="bi bi-journal-plus me-2"></i>Create Task
               </RouterLink>
             </li>
             <li class="nav-item">
@@ -52,36 +44,35 @@
       <div class="col p-4">
         <router-view />
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { ref, onMounted } from 'vue'
-const userName = ref('')
-import { useToast } from '@/composables/useToast'
-const toast = useToast()
+import { useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
+const userName = ref("");
+import { useToast } from "@/composables/useToast";
+const toast = useToast();
 
-const router = useRouter()
+const router = useRouter();
 onMounted(() => {
   const loggedIn = localStorage.getItem("loggedInSuccessMsg");
-  const name = localStorage.getItem("userName")
-  if (name) userName.value = name
+  const name = localStorage.getItem("userName");
+  if (name) userName.value = name;
 
   if (loggedIn) {
     toast.success(loggedIn);
     localStorage.removeItem("loggedInSuccessMsg");
   }
-})
+});
 
 const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('role')
-  localStorage.setItem('logout', 'Logged Out Successfully')
-  router.push('/login')
-}
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.setItem("logout", "Logged Out Successfully");
+  router.push("/login");
+};
 </script>
 
 <style>
