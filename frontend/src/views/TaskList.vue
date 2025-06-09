@@ -75,10 +75,11 @@
               <td>
                 <span v-if="Array.isArray(task.assignedTo)">
                   <span v-for="(user, idx) in task.assignedTo" :key="user._id || idx">
-                    {{ user.name || 'Unknown' }}<span v-if="idx < task.assignedTo.length - 1">, </span>
+                    {{ user.name || "Unknown"
+                    }}<span v-if="idx < task.assignedTo.length - 1">, </span>
                   </span>
                 </span>
-                <span v-else>{{ task.assignedTo?.name || '—' }}</span>
+                <span v-else>{{ task.assignedTo?.name || "—" }}</span>
               </td>
               <td>
                 <span :class="{
@@ -98,7 +99,6 @@
       </div>
 
       <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-
         <!-- Per Page -->
         <div>
           <select v-model="perPage" class="form-select form-select-sm w-auto" @change="handlePerPageChange">
@@ -111,27 +111,7 @@
         </div>
 
         <!-- Pagination -->
-        <nav v-if="totalPages > 1">
-          <ul class="pagination justify-content-center custom-pagination mb-0">
-            <li class="page-item" :class="{ disabled: currentPage === 1 }">
-              <button class="page-link" @click="changePage(currentPage - 1)">Prev</button>
-            </li>
-            <li class="page-item" v-if="currentPage > 2">
-              <button class="page-link" @click="changePage(1)">1</button>
-            </li>
-            <li class="page-item disabled" v-if="currentPage > 3"><span class="page-link">...</span></li>
-            <li class="page-item" v-for="page in pageRange" :key="page" :class="{ active: currentPage === page }">
-              <button class="page-link" @click="changePage(page)">{{ page }}</button>
-            </li>
-            <li class="page-item disabled" v-if="currentPage < totalPages - 2"><span class="page-link">...</span></li>
-            <li class="page-item" v-if="currentPage < totalPages - 1">
-              <button class="page-link" @click="changePage(totalPages)">{{ totalPages }}</button>
-            </li>
-            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-              <button class="page-link" @click="changePage(currentPage + 1)">Next</button>
-            </li>
-          </ul>
-        </nav>
+        <BasePagination :currentPage="currentPage" :totalPages="totalPages" @page-change="changePage" />
       </div>
     </div>
   </div>
@@ -143,8 +123,8 @@ import { request } from "@/services/apiWrapper";
 import * as bootstrap from "bootstrap";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.css";
-import { hideBootstrapModal } from '@/utils/bootstrapModal.js'
-
+import { hideBootstrapModal } from "@/utils/bootstrapModal.js";
+import BasePagination from "@/components/BasePagination.vue";
 
 defineOptions({ components: { Multiselect } });
 
@@ -159,12 +139,10 @@ const totalPages = ref(1);
 const perPage = ref(10);
 const createTaskModal = ref(null);
 
-let modalInstance;
-
 const { appContext } = getCurrentInstance();
 const toast = appContext.config.globalProperties.$toast;
 
-const customLabel = (user) => user?.name ? `${user.name} (${user.email})` : "Unknown";
+const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
 
 const pageRange = computed(() => {
   const range = [];
@@ -174,10 +152,13 @@ const pageRange = computed(() => {
   return range;
 });
 
-const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString() : "-";
+const formatDate = (dateStr) => (dateStr ? new Date(dateStr).toLocaleString() : "-");
 
 const fetchTasks = async (page = 1) => {
-  const [data, error] = await request("get", `/tasks?page=${page}&limit=${perPage.value}`);
+  const [data, error] = await request(
+    "get",
+    `/tasks?page=${page}&limit=${perPage.value}`
+  );
   if (error) {
     toast.error(error.message || "Failed to load tasks");
   } else {
@@ -195,8 +176,14 @@ const changePage = (page) => {
 };
 
 const handlePerPageChange = () => {
-  currentPage.value = 1;
-  fetchTasks(1);
+  fetchTasks();
+};
+
+const resetForm = () => {
+  title.value = "";
+  description.value = "";
+  dueDate.value = "";
+  assignedTo.value = [];
 };
 
 const handleTaskCreate = async () => {
@@ -218,26 +205,17 @@ const handleTaskCreate = async () => {
     }
   } else {
     toast.success(data.message || "Task created successfully!");
-    title.value = "";
-    description.value = "";
-    dueDate.value = "";
-    assignedTo.value = [];
-    fetchTasks(currentPage.value);
-
     await nextTick();
     hideBootstrapModal(createTaskModal);
+    fetchTasks(currentPage.value);
+    resetForm();
   }
 };
 
 onMounted(async () => {
   await fetchTasks();
-
-  const [userData, userError] = await request("get", "/users");
+  const [userData = {}, userError = null] = await request("get", "/users");
   if (!userError) users.value = userData.data;
-
-  if (createTaskModal.value) {
-    modalInstance = bootstrap.Modal.getOrCreateInstance(createTaskModal.value);
-  }
 });
 </script>
 
