@@ -46,3 +46,30 @@ const pageRange = computed(() => {
     return range;
 });
 </script>
+
+
+<style scoped>
+.custom-pagination .page-item {
+    margin: 0 4px;
+}
+
+.custom-pagination .page-link {
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
+    color: #0d6efd;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.custom-pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+.custom-pagination .page-item.disabled .page-link {
+    color: #adb5bd;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+</style>

@@ -26,7 +26,7 @@
               </div>
 
               <div class="form-floating mb-3">
-                <input v-model="dueDate" type="datetime-local" class="form-control" id="floatingDueDate" required />
+                <input v-model="dueDate" type="datetime-local" :min="minDate" :max="maxDate" class="form-control" />
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, getCurrentInstance, nextTick } from "vue";
+import { ref, onMounted, getCurrentInstance, nextTick } from "vue";
 import { request } from "@/services/apiWrapper";
 import * as bootstrap from "bootstrap";
 import Multiselect from "vue-multiselect";
@@ -142,17 +142,21 @@ const createTaskModal = ref(null);
 const { appContext } = getCurrentInstance();
 const toast = appContext.config.globalProperties.$toast;
 
-const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
+const today = new Date();
+const sixMonthsLater = new Date();
+sixMonthsLater.setMonth(today.getMonth() + 6);
 
-const pageRange = computed(() => {
-  const range = [];
-  const start = Math.max(currentPage.value - 1, 1);
-  const end = Math.min(currentPage.value + 1, totalPages.value);
-  for (let i = start; i <= end; i++) range.push(i);
-  return range;
-});
+const formatToDateTimeLocal = (date) => {
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const minDate = formatToDateTimeLocal(today);
+const maxDate = formatToDateTimeLocal(sixMonthsLater);
 
 const formatDate = (dateStr) => (dateStr ? new Date(dateStr).toLocaleString() : "-");
+const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
 
 const fetchTasks = async (page = 1) => {
   const [data, error] = await request(
@@ -187,7 +191,16 @@ const resetForm = () => {
 };
 
 const handleTaskCreate = async () => {
-  const isoDueDate = new Date(dueDate.value).toISOString();
+  const selectedDate = new Date(dueDate.value);
+  const now = new Date();
+  const minAllowedDate = new Date(now.getTime() + 5 * 60 * 1000);
+
+  if (selectedDate < minAllowedDate) {
+    toast.error("Due date/time must be at least 5 minutes in the future.");
+    return;
+  }
+
+  const isoDueDate = selectedDate.toISOString();
   const [data, error] = await request("post", "/tasks/create", {
     title: title.value,
     description: description.value,
@@ -219,28 +232,4 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
-.custom-pagination .page-item {
-  margin: 0 4px;
-}
-
-.custom-pagination .page-link {
-  border-radius: 0.5rem;
-  border: 1px solid #dee2e6;
-  color: #0d6efd;
-  padding: 0.375rem 0.75rem;
-  transition: all 0.2s ease;
-}
-
-.custom-pagination .page-item.active .page-link {
-  background-color: #0d6efd;
-  color: white;
-  border-color: #0d6efd;
-}
-
-.custom-pagination .page-item.disabled .page-link {
-  color: #adb5bd;
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
-}
-</style>
+<style scoped></style>
