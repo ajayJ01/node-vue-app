@@ -6,17 +6,13 @@ exports.createTask = async (req, reply) => {
     const { title, description, dueDate, assignedTo } = req.body;
     const assignedList = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
 
-    const tasks = await Promise.all(
-      assignedList.map((userId) =>
-        Task.create({
-          title,
-          description,
-          dueDate,
-          assignedTo: userId,
-          createdBy: req.user.id,
-        })
-      )
-    );
+    const tasks = await Task.create({
+      title,
+      description,
+      dueDate,
+      assignedTo: assignedList,
+      createdBy: req.user.id,
+    });
 
     return success(reply, "Task created & assigned successfully", tasks);
   } catch (err) {

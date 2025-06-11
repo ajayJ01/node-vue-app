@@ -41,8 +41,8 @@
       </div>
 
       <!-- Main content -->
-      <div class="col p-4">
-        <router-view />
+      <div class="col d-flex flex-column flex-grow-1">
+        <router-view class="flex-grow-1" />
       </div>
     </div>
   </div>
