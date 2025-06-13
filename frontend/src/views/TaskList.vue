@@ -46,7 +46,7 @@
     </div>
 
     <!-- Task List Card -->
-    <div class="card shadow-sm rounded-4 border-0 p-3 flex-grow-1 w-100 overflow-auto">
+    <div class="card shadow-sm rounded-4 border-0 p-3 flex-grow-1 w-100">
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h4 class="text-primary m-0"><i class="bi bi-list-check me-2"></i>Task List</h4>
@@ -60,37 +60,43 @@
         <table class="table align-middle text-nowrap table-sm">
           <thead class="table-light">
             <tr>
-              <th>Sr.</th>
-              <th>Title</th>
-              <th>Description</th>
-              <th>Due Date</th>
-              <th>Assigned To</th>
-              <th>Status</th>
+              <th style="width: 5%;">Sr.</th>
+              <th style="width: 15%;">Title</th>
+              <th style="width: 25%;">Description</th>
+              <th style="width: 20%;">Due Date</th>
+              <th style="width: 25%;">Assigned To</th>
+              <th style="width: 10%;">Status</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(task, index) in tasks" :key="task._id">
               <td>{{ (currentPage - 1) * perPage + index + 1 }}</td>
-              <td class="text-truncate" style="max-width: 150px;" :title="task.title">{{ task.title }}</td>
-              <td class="text-truncate" style="max-width: 200px;" :title="task.description">{{ task.description }}</td>
+              <td class="text-truncate" :title="task.title">{{ task.title }}</td>
+              <td class="text-truncate" :title="task.description">{{ task.description }}</td>
               <td>{{ formatDate(task.dueDate) }}</td>
-              <td>
-                <span v-if="Array.isArray(task.assignedTo)">
-                  <span
-                    v-for="(user, idx) in expandedRows.includes(task._id) ? task.assignedTo : task.assignedTo.slice(0, 3)"
-                    :key="user._id || idx" class="badge bg-light text-dark border me-1 small">
+              <td class="assigned-to-cell">
+                <div class="badge-container">
+                  <span v-if="Array.isArray(task.assignedTo)">
+                    <span v-for="(user, idx) in task.assignedTo.slice(0, 3)" :key="user._id || idx"
+                      class="badge bg-light text-dark border me-1 small">
+                      {{ user.name || "User" }}
+                    </span>
+                    <span v-if="task.assignedTo.length > 3 && !expandedRows.includes(task._id)"
+                      @click="toggleRow(task._id)" class="badge bg-light text-muted small toggle-badge"
+                      style="cursor: pointer;">
+                      +{{ task.assignedTo.length - 3 }}
+                    </span>
+                  </span>
+                  <span v-else class="badge bg-light text-dark border small">{{ task.assignedTo?.name || "—" }}</span>
+                </div>
+                <div v-if="task.assignedTo.length > 3 && expandedRows.includes(task._id)" class="expanded-content">
+                  <span v-for="(user, idx) in task.assignedTo.slice(3)" :key="user._id || idx"
+                    class="badge bg-light text-dark border me-1 small">
                     {{ user.name || "User" }}
                   </span>
-                  <span v-if="task.assignedTo.length > 3 && !expandedRows.includes(task._id)"
-                    @click="expandedRows.push(task._id)" class="badge bg-light text-muted small"
-                    style="cursor: pointer;">
-                    +{{ task.assignedTo.length - 3 }}
-                  </span>
-                  <span v-if="task.assignedTo.length > 3 && expandedRows.includes(task._id)"
-                    @click="expandedRows = expandedRows.filter(id => id !== task._id)"
-                    class="badge bg-light text-muted small" style="cursor: pointer;">Show less</span>
-                </span>
-                <span v-else class="badge bg-light text-dark border small">{{ task.assignedTo?.name || "—" }}</span>
+                  <span @click="toggleRow(task._id)" class="badge bg-light text-muted small toggle-badge"
+                    style="cursor: pointer;">Show less</span>
+                </div>
               </td>
               <td>
                 <span :class="[
@@ -187,7 +193,7 @@ const formatDate = (dateStr) => {
   const date = new Date(dateStr);
 
   const day = date.getDate();
-  const month = date.toLocaleString('default', { month: 'short' }); // "Nov"
+  const month = date.toLocaleString('default', { month: 'short' });
   const year = date.getFullYear();
 
   const hours = date.getHours();
@@ -198,6 +204,7 @@ const formatDate = (dateStr) => {
 
   return `${day} ${month}, ${year} ${formattedHour}:${minutes}:${seconds} ${ampm}`;
 };
+
 const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
 
 const fetchTasks = async (page = 1) => {
@@ -230,6 +237,14 @@ const resetForm = () => {
   description.value = "";
   dueDate.value = "";
   assignedTo.value = [];
+};
+
+const toggleRow = (taskId) => {
+  if (expandedRows.value.includes(taskId)) {
+    expandedRows.value = expandedRows.value.filter(id => id !== taskId);
+  } else {
+    expandedRows.value.push(taskId);
+  }
 };
 
 const handleTaskCreate = async () => {
@@ -283,5 +298,51 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.table {
+  table-layout: fixed; /* Ensure consistent column widths */
+}
+
+.table th,
+.table td {
+  vertical-align: middle; /* Center content vertically */
+  padding: 8px; /* Consistent padding */
+}
+
+.assigned-to-cell {
+  position: relative; /* For positioning expanded content */
+}
+
+.badge-container {
+  display: flex;
+  align-items: center; /* Align badges inline */
+  flex-wrap: wrap; /* Allow badges to wrap if needed */
+  gap: 4px; /* Space between badges */
+}
+
+.badge-container .badge {
+  margin: 0; /* Remove default margin */
+  font-size: 0.75rem; /* Smaller badge text */
+}
+
+.toggle-badge {
+  margin-left: 4px; /* Space from badges */
+  font-size: 0.75rem; /* Match badge size */
+}
+
+.expanded-content {
+  margin-top: 4px; /* Space from main badges */
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping */
+  gap: 4px; /* Space between expanded badges */
+}
+
+.expanded-content .badge {
+  font-size: 0.75rem; /* Consistent badge size */
+}
+
+.table td:not(.assigned-to-cell) {
+  white-space: nowrap; /* Prevent wrapping in other columns */
 }
 </style>
