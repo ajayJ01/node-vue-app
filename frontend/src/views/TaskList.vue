@@ -301,48 +301,48 @@ onMounted(async () => {
 }
 
 .table {
-  table-layout: fixed; /* Ensure consistent column widths */
+  table-layout: fixed;
 }
 
 .table th,
 .table td {
-  vertical-align: middle; /* Center content vertically */
-  padding: 8px; /* Consistent padding */
+  vertical-align: middle;
+  padding: 8px;
 }
 
 .assigned-to-cell {
-  position: relative; /* For positioning expanded content */
+  position: relative;
 }
 
 .badge-container {
   display: flex;
-  align-items: center; /* Align badges inline */
-  flex-wrap: wrap; /* Allow badges to wrap if needed */
-  gap: 4px; /* Space between badges */
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .badge-container .badge {
-  margin: 0; /* Remove default margin */
-  font-size: 0.75rem; /* Smaller badge text */
+  margin: 0;
+  font-size: 0.75rem;
 }
 
 .toggle-badge {
-  margin-left: 4px; /* Space from badges */
-  font-size: 0.75rem; /* Match badge size */
+  margin-left: 4px;
+  font-size: 0.75rem;
 }
 
 .expanded-content {
-  margin-top: 4px; /* Space from main badges */
+  margin-top: 4px;
   display: flex;
-  flex-wrap: wrap; /* Allow wrapping */
-  gap: 4px; /* Space between expanded badges */
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .expanded-content .badge {
-  font-size: 0.75rem; /* Consistent badge size */
+  font-size: 0.75rem;
 }
 
 .table td:not(.assigned-to-cell) {
-  white-space: nowrap; /* Prevent wrapping in other columns */
+  white-space: nowrap;
 }
 </style>

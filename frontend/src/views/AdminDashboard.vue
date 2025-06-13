@@ -7,7 +7,7 @@
           <i class="bi bi-list"></i>
         </button>
         <h4 class="mb-0 text-dark fw-semibold d-flex align-items-center">
-          <img src="/public/15c06586-c99e-4d29-85ea-c970f876b2e5.jpg" alt="WorkSync Logo" class="header-logo" /> WorkSync
+          <img src="/public/logo.png" alt="WorkSync Logo" class="header-logo" /> WorkSync
         </h4>
       </div>
       <span class="text-dark fw-semibold"> 👋 Hello, {{ userName }} </span>

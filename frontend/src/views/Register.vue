@@ -1,6 +1,7 @@
 <template>
-  <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
-    <div class="card shadow-lg p-4 rounded-4 border-0" style="max-width: 450px; width: 100%;">
+  <div class="container-fluid min-vh-100 d-flex justify-content-center align-items-start pt-4 bg-light m-0">
+ 
+    <div class="card shadow-lg rounded-4 border-0">
       <div class="text-center mb-4">
         <i class="bi bi-person-plus-fill fs-2 text-success"></i>
         <p class="text-muted mb-0 small">Register a user with a role to manage tasks</p>
@@ -13,18 +14,15 @@
         </div>
 
         <div class="form-floating mb-3">
-          <input v-model="email" type="email" class="form-control" id="floatingEmail" placeholder="name@example.com"
-            required />
+          <input v-model="email" type="email" class="form-control" id="floatingEmail" placeholder="name@example.com" required />
           <label for="floatingEmail">Email Address</label>
         </div>
 
         <div class="form-floating mb-3">
-          <input v-model="password" type="password" class="form-control" id="floatingPassword" placeholder="Password"
-            required />
+          <input v-model="password" type="password" class="form-control" id="floatingPassword" placeholder="Password" required />
           <label for="floatingPassword">Password</label>
         </div>
 
-        <!-- Role dropdown -->
         <div class="form-floating mb-4">
           <select v-model="role" class="form-select" id="floatingRole" required>
             <option disabled value="">Select a role</option>
@@ -83,41 +81,38 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-/* Card adjustments */
+
 .card {
-  max-width: 450px; /* Reduced from 720px */
+  max-width: 450px;
   width: 100%;
-  padding: 1.5rem; /* Reduced padding for smaller screens */
+  padding: 1.9rem;
+  margin: 0 !important;
 }
 
-/* Form elements */
 .form-control,
 .form-select {
-  font-size: 0.9rem; /* Slightly smaller font for better fit */
+  font-size: 0.9rem;
 }
 
-/* Labels */
 .form-floating > label {
   font-size: 0.9rem;
 }
 
-/* Button styling */
 .btn {
   font-size: 0.9rem;
   padding: 0.5rem 1rem;
 }
 
-/* Responsive adjustments */
 @media (max-width: 576px) {
   .card {
-    max-width: 90%; /* Slightly smaller on mobile */
-    padding: 1rem; /* Reduced padding on mobile */
+    max-width: 90%;
+    padding: 1rem;
   }
 
   .form-control,
   .form-select,
   .btn {
-    font-size: 0.85rem; /* Even smaller font on mobile */
+    font-size: 0.85rem;
   }
 
   .form-floating > label {
@@ -125,15 +120,15 @@ const handleRegister = async () => {
   }
 
   .text-center .fs-2 {
-    font-size: 1.5rem !important; /* Smaller icon on mobile */
+    font-size: 1.5rem !important;
   }
 
   .text-center h5 {
-    font-size: 1.25rem; /* Smaller heading on mobile */
+    font-size: 1.25rem;
   }
 
   .text-center p {
-    font-size: 0.8rem; /* Smaller subtitle on mobile */
+    font-size: 0.8rem;
   }
 }
 </style>
