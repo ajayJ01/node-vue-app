@@ -60,12 +60,13 @@
         <table class="table align-middle text-nowrap table-sm">
           <thead class="table-light">
             <tr>
-              <th style="width: 5%;">Sr.</th>
+              <th style="width: 4%;">Sr.</th>
               <th style="width: 15%;">Title</th>
-              <th style="width: 25%;">Description</th>
-              <th style="width: 20%;">Due Date</th>
-              <th style="width: 25%;">Assigned To</th>
+              <th style="width: 27%;">Description</th>
+              <th style="width: 14%;">Due Date</th>
+              <th style="width: 22%;">Assigned To</th>
               <th style="width: 10%;">Status</th>
+              <th style="width: 9%;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -73,7 +74,9 @@
               <td>{{ (currentPage - 1) * perPage + index + 1 }}</td>
               <td class="text-truncate" :title="task.title">{{ task.title }}</td>
               <td class="text-truncate" :title="task.description">{{ task.description }}</td>
-              <td>{{ formatDate(task.dueDate) }}</td>
+              <td :title="new Date(task.dueDate).toLocaleString()">
+                {{ formatDate(task.dueDate) }}
+              </td>
               <td class="assigned-to-cell">
                 <div class="badge-container">
                   <span v-if="Array.isArray(task.assignedTo)">
@@ -99,30 +102,41 @@
                 </div>
               </td>
               <td>
-                <span :class="[
-                  'badge d-inline-flex align-items-center gap-1 rounded-pill px-2 py-1 fw-semibold small',
-                  task.status === 'pending' ? 'bg-warning text-dark' :
-                    task.status === 'in_progress' ? 'bg-primary text-white' :
-                      task.status === 'submitted' ? 'bg-purple text-white' :
-                        task.status === 'verified' ? 'bg-success text-white' :
-                          'bg-secondary text-white'
-                ]">
-                  <i :class="{
-                    'bi-hourglass-split': task.status === 'pending',
-                    'bi-arrow-repeat': task.status === 'in_progress',
-                    'bi-upload': task.status === 'submitted',
-                    'bi-check-circle': task.status === 'verified',
-                    'bi-question-circle': !task.status
-                  }"></i>
-                  {{
-                    {
-                      pending: 'Pending',
-                      in_progress: 'Progress',
-                      submitted: 'Submitted',
-                      verified: 'Done'
-                    }[task.status] || 'Unknown'
-                  }}
-                </span>
+              <span :class="[
+                'badge d-inline-flex align-items-center gap-1 rounded-pill fw-semibold small',
+                task.status === 'pending' ? 'bg-warning text-dark' :
+                task.status === 'in_progress' ? 'bg-primary text-white' :
+                task.status === 'submitted' ? 'bg-purple text-white' :
+                task.status === 'verified' ? 'bg-success text-white' :
+                task.status === 'cancelled' ? 'bg-danger text-white' :
+                'bg-secondary text-white'
+              ]">
+                <i :class="{
+                  'bi-hourglass-split': task.status === 'pending',
+                  'bi-arrow-repeat': task.status === 'in_progress',
+                  'bi-upload': task.status === 'submitted',
+                  'bi-check-circle': task.status === 'verified',
+                  'bi-x-circle': task.status === 'cancelled',
+                  'bi-question-circle': !task.status
+                }"></i>
+                {{
+                  {
+                    pending: 'Pending',
+                    in_progress: 'Progress',
+                    submitted: 'Submitted',
+                    verified: 'Done',
+                    cancelled: 'Cancelled'
+                  }[task.status] || 'Unknown'
+                }}
+              </span>
+            </td>
+              <td class="text-nowrap">
+                <button @click="handleTaskEdit(task)" class="btn btn-sm btn-outline-secondary me-1" title="Edit Task">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button v-if="task.status != 'cancelled'" @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger" title="Cancel Task">
+                  <i class="bi bi-x-circle"></i>
+                </button>
               </td>
             </tr>
             <tr v-if="tasks.length === 0">
@@ -156,6 +170,7 @@ import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.css";
 import { hideBootstrapModal } from "@/utils/bootstrapModal.js";
 import BasePagination from "@/components/BasePagination.vue";
+import Swal from 'sweetalert2';
 
 defineOptions({ components: { Multiselect } });
 
@@ -193,16 +208,14 @@ const formatDate = (dateStr) => {
   const date = new Date(dateStr);
 
   const day = date.getDate();
-  const month = date.toLocaleString('default', { month: 'short' });
-  const year = date.getFullYear();
+  const month = date.toLocaleString("default", { month: "short" });
 
   const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
   const formattedHour = hours % 12 || 12;
 
-  return `${day} ${month}, ${year} ${formattedHour}:${minutes}:${seconds} ${ampm}`;
+  return `${day} ${month}, ${formattedHour}:${minutes} ${ampm}`;
 };
 
 const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
@@ -218,6 +231,31 @@ const fetchTasks = async (page = 1) => {
     tasks.value = data.data.tasks || [];
     totalPages.value = data.data.totalPages || 1;
     currentPage.value = data.data.currentPage || page;
+  }
+};
+
+const handleTaskCancel = async (task) => {
+  const result = await Swal.fire({
+    title: 'Cancel this task?',
+    text: `"${task.title}" will be marked as cancelled.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, cancel it!',
+    cancelButtonText: 'No, keep it',
+    reverseButtons: true,
+  });
+
+  if (result.isConfirmed) {
+    const [data, error] = await request("put", `/tasks/${task._id}/cancel`);
+
+    if (error) {
+      toast.error(error.message || "Failed to cancel task.");
+    } else {
+      toast.success(data.message || "Task cancelled successfully.");
+      fetchTasks(currentPage.value);
+    }
   }
 };
 

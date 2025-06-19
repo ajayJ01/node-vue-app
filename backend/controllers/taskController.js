@@ -1,5 +1,5 @@
 const Task = require("../models/Task");
-const { success, error, validationError } = require("../utils/response");
+const { success, error, notFound } = require("../utils/response");
 
 exports.createTask = async (req, reply) => {
   try {
@@ -49,6 +49,32 @@ exports.getAllTasks = async (req, reply) => {
     });
   } catch (err) {
     console.error("Fetch Tasks Error:", err);
+    return error(reply);
+  }
+};
+
+exports.cancelTask = async (req, reply) => {
+  try {
+    const userId = req.user.id;
+    const taskId = req.params.id;
+
+    const task = await Task.findOne({ _id: taskId });
+
+    if (!task) {
+      return notFound(reply, "Task not found");
+    }
+
+    if (task.status === 'cancelled') {
+      return conflict(reply, 'Task is already cancelled');
+    }
+
+    task.status = "cancelled";
+    task.updatedAt = new Date();
+    await task.save();
+
+    return success(reply, "Task cancelled successfully", task);
+  } catch (err) {
+    console.error("Cancel Task Error:", err);
     return error(reply);
   }
 };

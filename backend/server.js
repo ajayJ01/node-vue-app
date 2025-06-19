@@ -13,7 +13,11 @@ const connectDB = require('./config/db');
 connectDB();
 
 // CORS enable
-fastify.register(require('@fastify/cors'), { origin: '*', credentials: true });
+fastify.register(require('@fastify/cors'), {
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+});
 
 fastify.get('/', async (req, reply) => {
     return { message: 'API is running...' };

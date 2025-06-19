@@ -7,6 +7,7 @@ async function authRoutes(fastify, options) {
         protectedRoutes.addHook('preHandler', authenticate)
         protectedRoutes.post('/tasks/create', { schema: taskValidation.taskCreate }, taskController.createTask)
         protectedRoutes.get('/tasks', taskController.getAllTasks);
+        protectedRoutes.put('/tasks/:id/cancel', taskController.cancelTask);
     })
 }
 
