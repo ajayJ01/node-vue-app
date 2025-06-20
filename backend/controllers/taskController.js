@@ -21,6 +21,36 @@ exports.createTask = async (req, reply) => {
   }
 };
 
+exports.updateTask = async (req, reply) => {
+  try {
+    const taskId = req.params.id;
+    const { title, description, dueDate, assignedTo, status } = req.body;
+
+    const assignedList = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
+
+    const updated = await Task.findByIdAndUpdate(
+      taskId,
+      {
+        title,
+        description,
+        dueDate,
+        assignedTo: assignedList,
+        ...(status && { status }) // only update if status is provided
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return notFound(reply, "Task not found");
+    }
+
+    return success(reply, "Task updated successfully", updated);
+  } catch (err) {
+    console.error("Task Update Error:", err);
+    return error(reply);
+  }
+};
+
 exports.getAllTasks = async (req, reply) => {
   try {
     const userId = req.user.id;

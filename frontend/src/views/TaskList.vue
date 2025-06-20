@@ -7,12 +7,13 @@
         <div class="modal-content p-3 rounded-4">
           <div class="modal-header border-0">
             <h5 class="modal-title text-primary" id="createTaskModalLabel">
-              <i class="bi bi-card-checklist me-2"></i>Create and assign a task
+              <i class="bi bi-card-checklist me-2"></i>
+              {{ editingTask ? "Edit Task" : "Create and assign a task" }}
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <form @submit.prevent="handleTaskCreate">
+            <form @submit.prevent="handleTaskSubmit">
               <div class="form-floating mb-3">
                 <input v-model="title" type="text" class="form-control" id="floatingTitle" placeholder="Task Title"
                   required />
@@ -30,6 +31,14 @@
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
+              <div v-if="editingTask" class="form-floating mb-4">
+                <select v-model="status" class="form-select" id="floatingStatus" required>
+                  <option value="pending">Pending</option>
+                  <option value="verified">Done</option>
+                </select>
+                <label for="floatingStatus">Task Status</label>
+              </div>
+
               <div class="mb-4">
                 <label class="form-label fw-semibold">Assign To</label>
                 <multiselect v-model="assignedTo" :options="users" :custom-label="customLabel" track-by="_id"
@@ -37,7 +46,8 @@
               </div>
 
               <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm">
-                <i class="bi bi-plus-circle me-2"></i>Create Task
+                <i :class="editingTask ? 'bi bi-pencil-square' : 'bi bi-plus-circle'" class="me-2"></i>
+                {{ editingTask ? "Update Task" : "Create Task" }}
               </button>
             </form>
           </div>
@@ -50,7 +60,7 @@
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h4 class="text-primary m-0"><i class="bi bi-list-check me-2"></i>Task List</h4>
-        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+        <button class="btn btn-outline-primary btn-sm" @click="openCreateModal">
           <i class="bi bi-plus-circle me-1"></i> New Task
         </button>
       </div>
@@ -61,10 +71,10 @@
           <thead class="table-light">
             <tr>
               <th style="width: 4%;">Sr.</th>
-              <th style="width: 15%;">Title</th>
+              <th style="width: 17%;">Title</th>
               <th style="width: 27%;">Description</th>
               <th style="width: 14%;">Due Date</th>
-              <th style="width: 22%;">Assigned To</th>
+              <th style="width: 20%;">Assigned To</th>
               <th style="width: 10%;">Status</th>
               <th style="width: 9%;">Actions</th>
             </tr>
@@ -102,39 +112,40 @@
                 </div>
               </td>
               <td>
-              <span :class="[
-                'badge d-inline-flex align-items-center gap-1 rounded-pill fw-semibold small',
-                task.status === 'pending' ? 'bg-warning text-dark' :
-                task.status === 'in_progress' ? 'bg-primary text-white' :
-                task.status === 'submitted' ? 'bg-purple text-white' :
-                task.status === 'verified' ? 'bg-success text-white' :
-                task.status === 'cancelled' ? 'bg-danger text-white' :
-                'bg-secondary text-white'
-              ]">
-                <i :class="{
-                  'bi-hourglass-split': task.status === 'pending',
-                  'bi-arrow-repeat': task.status === 'in_progress',
-                  'bi-upload': task.status === 'submitted',
-                  'bi-check-circle': task.status === 'verified',
-                  'bi-x-circle': task.status === 'cancelled',
-                  'bi-question-circle': !task.status
-                }"></i>
-                {{
-                  {
-                    pending: 'Pending',
-                    in_progress: 'Progress',
-                    submitted: 'Submitted',
-                    verified: 'Done',
-                    cancelled: 'Cancelled'
-                  }[task.status] || 'Unknown'
-                }}
-              </span>
-            </td>
-              <td class="text-nowrap">
+                <span :class="[
+                  'badge d-inline-flex align-items-center gap-1 rounded-pill fw-semibold small',
+                  task.status === 'pending' ? 'bg-warning text-dark' :
+                    task.status === 'in_progress' ? 'bg-primary text-white' :
+                      task.status === 'submitted' ? 'bg-purple text-white' :
+                        task.status === 'verified' ? 'bg-success text-white' :
+                          task.status === 'cancelled' ? 'bg-danger text-white' :
+                            'bg-secondary text-white'
+                ]">
+                  <i :class="{
+                    'bi-hourglass-split': task.status === 'pending',
+                    'bi-arrow-repeat': task.status === 'in_progress',
+                    'bi-upload': task.status === 'submitted',
+                    'bi-check-circle': task.status === 'verified',
+                    'bi-x-circle': task.status === 'cancelled',
+                    'bi-question-circle': !task.status
+                  }"></i>
+                  {{
+                    {
+                      pending: 'Pending',
+                      in_progress: 'Progress',
+                      submitted: 'Submitted',
+                      verified: 'Done',
+                      cancelled: 'Cancelled'
+                    }[task.status] || 'Unknown'
+                  }}
+                </span>
+              </td>
+              <td v-if="task.status != 'cancelled'" class="text-nowrap">
                 <button @click="handleTaskEdit(task)" class="btn btn-sm btn-outline-secondary me-1" title="Edit Task">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button v-if="task.status != 'cancelled'" @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger" title="Cancel Task">
+                <button @click="handleTaskCancel(task)"
+                  class="btn btn-sm btn-outline-danger" title="Cancel Task">
                   <i class="bi bi-x-circle"></i>
                 </button>
               </td>
@@ -168,7 +179,7 @@ import { ref, onMounted, getCurrentInstance, nextTick } from "vue";
 import { request } from "@/services/apiWrapper";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.css";
-import { hideBootstrapModal } from "@/utils/bootstrapModal.js";
+import { hideBootstrapModal, showBootstrapModal } from "@/utils/bootstrapModal.js";
 import BasePagination from "@/components/BasePagination.vue";
 import Swal from 'sweetalert2';
 
@@ -177,6 +188,7 @@ defineOptions({ components: { Multiselect } });
 const title = ref("");
 const description = ref("");
 const dueDate = ref("");
+const status = ref("pending");
 const assignedTo = ref([]);
 const users = ref([]);
 const tasks = ref([]);
@@ -184,6 +196,7 @@ const currentPage = ref(1);
 const totalPages = ref(1);
 const perPage = ref(10);
 const createTaskModal = ref(null);
+const editingTask = ref(null);
 const expandedRows = ref([]);
 
 const { appContext } = getCurrentInstance();
@@ -193,10 +206,23 @@ const today = new Date();
 const sixMonthsLater = new Date();
 sixMonthsLater.setMonth(today.getMonth() + 6);
 
-const formatToDateTimeLocal = (date) => {
+const formatToDateTimeLocal = (input) => {
+  const date = new Date(input);
+
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.warn("Invalid date passed to formatToDateTimeLocal:", input);
+    return "";
+  }
+
   const offset = date.getTimezoneOffset();
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
   return localDate.toISOString().slice(0, 16);
+};
+
+const openCreateModal = () => {
+  resetForm();
+  editingTask.value = null;
+  showBootstrapModal(createTaskModal);
 };
 
 const minDate = formatToDateTimeLocal(today);
@@ -275,6 +301,8 @@ const resetForm = () => {
   description.value = "";
   dueDate.value = "";
   assignedTo.value = [];
+  status.value = "pending";
+  editingTask.value = null;
 };
 
 const toggleRow = (taskId) => {
@@ -285,23 +313,35 @@ const toggleRow = (taskId) => {
   }
 };
 
-const handleTaskCreate = async () => {
+const handleTaskSubmit = async () => {
   const selectedDate = new Date(dueDate.value);
   const now = new Date();
   const minAllowedDate = new Date(now.getTime() + 5 * 60 * 1000);
 
-  if (selectedDate < minAllowedDate) {
-    toast.error("Due date/time must be at least 5 minutes in the future.");
-    return;
+  const isEdit = !!editingTask.value;
+
+  if(tasks.value !== 'pending' && status.value == 'pending'){
+    if (selectedDate < minAllowedDate) {
+      toast.error("Due date/time must be at least 5 minutes in the future.");
+      return;
+    }
   }
 
-  const isoDueDate = selectedDate.toISOString();
-  const [data, error] = await request("post", "/tasks/create", {
+  const payload = {
     title: title.value,
     description: description.value,
-    dueDate: isoDueDate,
+    dueDate: selectedDate.toISOString(),
     assignedTo: assignedTo.value.map((user) => user._id),
-  });
+  };
+
+  if (editingTask.value) {
+    payload.status = status.value;
+  }
+
+  const url = isEdit ? `/tasks/${editingTask.value._id}/update` : "/tasks/create";
+  const method = isEdit ? "put" : "post";
+
+  const [data, error] = await request(method, url, payload);
 
   if (error) {
     if (error.errors) {
@@ -309,10 +349,10 @@ const handleTaskCreate = async () => {
         toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${msg}`)
       );
     } else {
-      toast.error(error.message || "Task creation failed");
+      toast.error(error.message || (isEdit ? "Task update failed" : "Task creation failed"));
     }
   } else {
-    toast.success(data.message || "Task created successfully!");
+    toast.success(data.message || (isEdit ? "Task updated successfully!" : "Task created successfully!"));
     await nextTick();
     hideBootstrapModal(createTaskModal);
     fetchTasks(currentPage.value);
@@ -320,10 +360,29 @@ const handleTaskCreate = async () => {
   }
 };
 
+const handleTaskEdit = (task) => {
+  editingTask.value = task;
+  title.value = task.title;
+  description.value = task.description;
+  dueDate.value = formatToDateTimeLocal(task.dueDate);
+  assignedTo.value = task.assignedTo;
+  status.value = task.status || "pending";
+  showBootstrapModal(createTaskModal);
+};
+
 onMounted(async () => {
   await fetchTasks();
+
   const [userData = {}, userError = null] = await request("get", "/users");
   if (!userError) users.value = userData.data;
+
+  const modalEl = createTaskModal.value;
+  if (modalEl) {
+    modalEl.addEventListener("hidden.bs.modal", () => {
+      resetForm();
+      editingTask.value = null;
+    });
+  }
 });
 </script>
 

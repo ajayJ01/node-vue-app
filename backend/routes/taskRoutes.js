@@ -8,6 +8,8 @@ async function authRoutes(fastify, options) {
         protectedRoutes.post('/tasks/create', { schema: taskValidation.taskCreate }, taskController.createTask)
         protectedRoutes.get('/tasks', taskController.getAllTasks);
         protectedRoutes.put('/tasks/:id/cancel', taskController.cancelTask);
+        protectedRoutes.put('/tasks/:id/update', { schema: taskValidation.taskUpdate }, taskController.updateTask
+        );
     })
 }
 
