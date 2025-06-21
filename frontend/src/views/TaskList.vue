@@ -27,13 +27,16 @@
               </div>
 
               <div class="form-floating mb-3">
-                <input v-model="dueDate" type="datetime-local" :min="minDate" :max="maxDate" class="form-control" />
+                <input v-model="dueDate" type="datetime-local" :min="isMinDateDisabled ? null : minDate" :max="maxDate"
+                  class="form-control" />
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
               <div v-if="editingTask" class="form-floating mb-4">
                 <select v-model="status" class="form-select" id="floatingStatus" required>
                   <option value="pending">Pending</option>
+                  <option v-if="status === 'in_progress'" value="in_progress">In Progress</option>
+                  <option v-if="status === 'submitted'" value="submitted">Submitted</option>
                   <option value="verified">Done</option>
                 </select>
                 <label for="floatingStatus">Task Status</label>
@@ -144,8 +147,7 @@
                 <button @click="handleTaskEdit(task)" class="btn btn-sm btn-outline-secondary me-1" title="Edit Task">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button @click="handleTaskCancel(task)"
-                  class="btn btn-sm btn-outline-danger" title="Cancel Task">
+                <button @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger" title="Cancel Task">
                   <i class="bi bi-x-circle"></i>
                 </button>
               </td>
@@ -175,7 +177,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, getCurrentInstance, nextTick } from "vue";
+import { ref, onMounted, getCurrentInstance, nextTick, computed } from "vue";
 import { request } from "@/services/apiWrapper";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.css";
@@ -198,11 +200,19 @@ const perPage = ref(10);
 const createTaskModal = ref(null);
 const editingTask = ref(null);
 const expandedRows = ref([]);
+const originalTask = computed(() =>
+  tasks.value.find(task => task._id === editingTask.value?._id)
+);
+
+const isMinDateDisabled = computed(() => {
+  return status.value === 'verified';
+});
 
 const { appContext } = getCurrentInstance();
 const toast = appContext.config.globalProperties.$toast;
 
 const today = new Date();
+const minAllowedDate = new Date(today.getTime() + 60 * 60 * 1000); // 1hr ahead
 const sixMonthsLater = new Date();
 sixMonthsLater.setMonth(today.getMonth() + 6);
 
@@ -225,7 +235,7 @@ const openCreateModal = () => {
   showBootstrapModal(createTaskModal);
 };
 
-const minDate = formatToDateTimeLocal(today);
+const minDate = formatToDateTimeLocal(minAllowedDate);
 const maxDate = formatToDateTimeLocal(sixMonthsLater);
 
 const formatDate = (dateStr) => {
@@ -314,15 +324,18 @@ const toggleRow = (taskId) => {
 };
 
 const handleTaskSubmit = async () => {
+  const originalTask = tasks.value.find(task => task._id === editingTask.value._id);
+  console.log('Original Task Before Edit:', originalTask);
+
   const selectedDate = new Date(dueDate.value);
   const now = new Date();
   const minAllowedDate = new Date(now.getTime() + 5 * 60 * 1000);
 
   const isEdit = !!editingTask.value;
 
-  if(tasks.value !== 'pending' && status.value == 'pending'){
+  if (originalTask.status !== 'pending' && status.value == 'pending') {
     if (selectedDate < minAllowedDate) {
-      toast.error("Due date/time must be at least 5 minutes in the future.");
+      toast.error("Due date & time must be at least 1 hour in the future.");
       return;
     }
   }
