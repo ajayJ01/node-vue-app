@@ -1,23 +1,61 @@
 const Task = require("../models/Task");
 const { success, error, notFound } = require("../utils/response");
+const { uploadFile } = require('../utils/fileUpload');
 
 exports.createTask = async (req, reply) => {
   try {
-    const { title, description, dueDate, assignedTo } = req.body;
-    const assignedList = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
+    if (!req.isMultipart()) {
+      return reply.status(400).send({ message: 'Request is not multipart' });
+    }
 
-    const tasks = await Task.create({
+    const parts = req.parts();
+    const formData = {};
+    let filePart = null;
+
+    for await (const part of parts) {
+      if (part.file && part.fieldname === 'file') {
+        filePart = part;
+        console.log('📦 File received:', part.filename);
+      } else {
+        formData[part.fieldname] = part.value;
+        console.log('📩 Field received:', part.fieldname, '=', part.value);
+      }
+    }
+
+    console.log('✅ Finished reading parts');
+
+    const { title, description, dueDate, assignedTo } = formData;
+    const assignedList = Array.isArray(assignedTo)
+      ? assignedTo
+      : [assignedTo];
+
+    let fileUrl = null;
+
+    if (filePart) {
+      console.log('⬇ Uploading file...');
+      fileUrl = await uploadFile(filePart, {
+        folder: 'uploads/tasks',
+        allowedExtensions: ['.pdf', '.png', '.jpg', '.jpeg', '.webp'],
+        maxSizeMB: 5,
+      });
+      console.log('✅ File uploaded:', fileUrl);
+    }
+
+    console.log('🛠 Creating task...');
+    const task = await Task.create({
       title,
       description,
+      fileUrl,
       dueDate,
       assignedTo: assignedList,
       createdBy: req.user.id,
     });
 
-    return success(reply, "Task created & assigned successfully", tasks);
+    console.log('✅ Task created:', task._id);
+    return success(reply, 'Task created & assigned successfully', task);
   } catch (err) {
-    console.error("Task Creation Error:", err);
-    return error(reply);
+    console.error('🚨 Task Creation Error:', err);
+    return error(reply, 'Failed to create task');
   }
 };
 

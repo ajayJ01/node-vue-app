@@ -13,26 +13,46 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <form @submit.prevent="handleTaskSubmit">
+            <form @submit.prevent="handleTaskSubmit" enctype="multipart/form-data">
+              <!-- Title -->
               <div class="form-floating mb-3">
                 <input v-model="title" type="text" class="form-control" id="floatingTitle" placeholder="Task Title"
                   required />
                 <label for="floatingTitle">Task Title</label>
               </div>
 
+              <!-- Description -->
               <div class="form-floating mb-3">
                 <textarea v-model="description" class="form-control" placeholder="Task Description" id="floatingDesc"
                   style="height: 100px" required></textarea>
                 <label for="floatingDesc">Description</label>
               </div>
 
+              <!-- File Upload -->
+              <div class="mb-3">
+                <label for="fileUpload" class="form-label fw-semibold">Upload File (PDF/Image)</label>
+                <input type="file" class="form-control" id="fileUpload" ref="fileInput" accept=".pdf,image/*"
+                  @change="handleFileChange" />
+                <!-- Show file name if selected -->
+                <div v-if="file?.name" class="text-success small mt-1">Selected: {{ file.name }}</div>
+              </div>
+
+              <!-- Due Date -->
               <div class="form-floating mb-3">
                 <input v-model="dueDate" type="datetime-local" :min="isMinDateDisabled ? null : minDate" :max="maxDate"
-                  class="form-control" />
+                  class="form-control" id="floatingDueDate" required />
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
-              <div v-if="editingTask" class="form-floating mb-4">
+              <!-- Show File Preview if editing -->
+              <div v-if="editingTask?.fileUrl" class="mb-3">
+                <a :href="editingTask.fileUrl" target="_blank" class="btn btn-outline-info btn-sm">
+                  <i class="bi bi-eye me-1"></i> View Uploaded File
+                </a>
+              </div>
+
+              <!-- Status Dropdown (only in edit mode) -->
+              <div v-if="editingTask" class="form-floating mb-3">
                 <select v-model="status" class="form-select" id="floatingStatus" required>
                   <option value="pending">Pending</option>
                   <option v-if="status === 'in_progress'" value="in_progress">In Progress</option>
@@ -42,17 +62,20 @@
                 <label for="floatingStatus">Task Status</label>
               </div>
 
+              <!-- Assign To -->
               <div class="mb-4">
                 <label class="form-label fw-semibold">Assign To</label>
                 <multiselect v-model="assignedTo" :options="users" :custom-label="customLabel" track-by="_id"
                   placeholder="Select users" :multiple="true" :close-on-select="false" />
               </div>
 
+              <!-- Submit Button -->
               <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm">
                 <i :class="editingTask ? 'bi bi-pencil-square' : 'bi bi-plus-circle'" class="me-2"></i>
                 {{ editingTask ? "Update Task" : "Create Task" }}
               </button>
             </form>
+
           </div>
         </div>
       </div>
@@ -143,13 +166,20 @@
                   }}
                 </span>
               </td>
-              <td v-if="task.status != 'cancelled'" class="text-nowrap">
-                <button @click="handleTaskEdit(task)" class="btn btn-sm btn-outline-secondary me-1" title="Edit Task">
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <button @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger" title="Cancel Task">
-                  <i class="bi bi-x-circle"></i>
-                </button>
+              <td class="text-nowrap">
+                <span :title="task.status === 'cancelled' ? 'Cancelled task cannot be edited' : 'Edit Task'">
+                  <button @click="handleTaskEdit(task)" class="btn btn-sm btn-outline-secondary me-1"
+                    :disabled="task.status === 'cancelled'">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </span>
+
+                <span :title="task.status === 'cancelled' ? 'Task already cancelled' : 'Cancel Task'">
+                  <button @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger"
+                    :disabled="task.status === 'cancelled'">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                </span>
               </td>
             </tr>
             <tr v-if="tasks.length === 0">
@@ -189,6 +219,8 @@ defineOptions({ components: { Multiselect } });
 
 const title = ref("");
 const description = ref("");
+const file = ref(null);
+const fileInput = ref(null);
 const dueDate = ref("");
 const status = ref("pending");
 const assignedTo = ref([]);
@@ -200,9 +232,6 @@ const perPage = ref(10);
 const createTaskModal = ref(null);
 const editingTask = ref(null);
 const expandedRows = ref([]);
-const originalTask = computed(() =>
-  tasks.value.find(task => task._id === editingTask.value?._id)
-);
 
 const isMinDateDisabled = computed(() => {
   return status.value === 'verified';
@@ -228,6 +257,37 @@ const formatToDateTimeLocal = (input) => {
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
   return localDate.toISOString().slice(0, 16);
 };
+
+const handleFileChange = (event) => {
+  const selected = event.target.files[0];
+  if (!selected) return;
+
+  const validTypes = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+  ];
+  const maxSizeMB = 5; // Max file size in MB
+
+  if (!validTypes.includes(selected.type)) {
+    const allowed = ["PDF", "PNG", "JPEG", "JPG", "WEBP"].join(", ");
+    toast.error(`Invalid file type. Allowed types: ${allowed}`);
+    file.value = null;
+    return;
+  }
+
+  const fileSizeMB = selected.size / (1024 * 1024);
+  if (fileSizeMB > maxSizeMB) {
+    toast.error(`File too large. Max allowed size is ${maxSizeMB}MB.`);
+    file.value = null;
+    return;
+  }
+
+  file.value = selected;
+};
+
 
 const openCreateModal = () => {
   resetForm();
@@ -309,6 +369,8 @@ const handlePerPageChange = () => {
 const resetForm = () => {
   title.value = "";
   description.value = "";
+  file.value = null;
+  fileInput.value.value = "";
   dueDate.value = "";
   assignedTo.value = [];
   status.value = "pending";
@@ -324,43 +386,60 @@ const toggleRow = (taskId) => {
 };
 
 const handleTaskSubmit = async () => {
-  const originalTask = tasks.value.find(task => task._id === editingTask.value._id);
-  console.log('Original Task Before Edit:', originalTask);
+  const isEdit = !!editingTask.value;
 
   const selectedDate = new Date(dueDate.value);
   const now = new Date();
   const minAllowedDate = new Date(now.getTime() + 5 * 60 * 1000);
 
-  const isEdit = !!editingTask.value;
+  const originalTask = isEdit
+    ? tasks.value.find(task => task._id === editingTask.value._id)
+    : null;
 
-  if (originalTask.status !== 'pending' && status.value == 'pending') {
+  // Validation: Only for reverting from verified to pending
+  if (originalTask && originalTask.status !== 'pending' && status.value === 'pending') {
     if (selectedDate < minAllowedDate) {
-      toast.error("Due date & time must be at least 1 hour in the future.");
+      toast.error("Due date & time must be at least 5 minutes in the future.");
       return;
     }
   }
 
-  const payload = {
-    title: title.value,
-    description: description.value,
-    dueDate: selectedDate.toISOString(),
-    assignedTo: assignedTo.value.map((user) => user._id),
-  };
+  const formData = new FormData();
+  formData.append('title', title.value.trim());
+  formData.append('description', description.value.trim());
+  formData.append('dueDate', selectedDate.toISOString());
 
-  if (editingTask.value) {
-    payload.status = status.value;
+  // Handle assignedTo
+  if (assignedTo.value.length === 0) {
+    toast.error("At least one assignee must be selected.");
+    return;
   }
 
-  const url = isEdit ? `/tasks/${editingTask.value._id}/update` : "/tasks/create";
+  assignedTo.value.forEach((user) => {
+    formData.append('assignedTo', user._id);
+  });
+
+  if (isEdit) {
+    formData.append('status', status.value);
+  }
+
+  if (file.value) {
+    formData.append('file', file.value);
+  }
+
+  const url = isEdit
+    ? `/tasks/${editingTask.value._id}/update`
+    : "/tasks/create";
+
   const method = isEdit ? "put" : "post";
 
-  const [data, error] = await request(method, url, payload);
+  const [data, error] = await request(method, url, formData);
 
   if (error) {
     if (error.errors) {
-      Object.entries(error.errors).forEach(([field, msg]) =>
-        toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${msg}`)
-      );
+      Object.entries(error.errors).forEach(([field, msg]) => {
+        toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${msg}`);
+      });
     } else {
       toast.error(error.message || (isEdit ? "Task update failed" : "Task creation failed"));
     }
