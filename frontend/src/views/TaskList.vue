@@ -37,6 +37,28 @@
                 <div v-if="file?.name" class="text-success small mt-1">Selected: {{ file.name }}</div>
               </div>
 
+              <!-- Show File Preview if editing -->
+              <div v-if="editingTask?.fileUrl" class="mb-3">
+                <td class="attachment-cell">
+                  <div v-if="editingTask.fileUrl">
+                    <template v-if="isImage(editingTask.fileUrl)">
+                      <img :src="getFullFileUrl(editingTask.fileUrl)" alt="Image" class="attachment-preview"
+                        :title="editingTask.fileUrl.split('/').pop()" />
+                    </template>
+                    <template v-else>
+                      <a :href="getFullFileUrl(editingTask.fileUrl)" target="_blank" class="attachment-pdf"
+                        :title="editingTask.fileUrl.split('/').pop()">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> View PDF
+                      </a>
+                    </template>
+                  </div>
+                  <div v-else class="no-file">
+                    <i class="bi bi-file-earmark-x fs-5 text-muted"></i>
+                    <div class="small text-muted">No File</div>
+                  </div>
+                </td>
+              </div>
+
               <!-- Due Date -->
               <div class="form-floating mb-3">
                 <input v-model="dueDate" type="datetime-local" :min="isMinDateDisabled ? null : minDate" :max="maxDate"
@@ -44,12 +66,6 @@
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
-              <!-- Show File Preview if editing -->
-              <div v-if="editingTask?.fileUrl" class="mb-3">
-                <a :href="editingTask.fileUrl" target="_blank" class="btn btn-outline-info btn-sm">
-                  <i class="bi bi-eye me-1"></i> View Uploaded File
-                </a>
-              </div>
 
               <!-- Status Dropdown (only in edit mode) -->
               <div v-if="editingTask" class="form-floating mb-3">
@@ -540,7 +556,7 @@ td:nth-child(3) {
 }
 
 .attachment-preview:hover {
-  transform: scale(1.4);
+  transform: scale(1.2);
   z-index: 10;
   position: relative;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);

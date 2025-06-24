@@ -1,11 +1,11 @@
 const Task = require("../models/Task");
 const { success, error, notFound } = require("../utils/response");
-const { uploadFile } = require('../utils/fileUpload');
+const { uploadFile } = require("../utils/fileUpload");
 
 exports.createTask = async (req, reply) => {
   try {
     if (!req.isMultipart()) {
-      return reply.status(400).send({ message: 'Request is not multipart' });
+      return reply.status(400).send({ message: "Request is not multipart" });
     }
 
     const parts = req.parts();
@@ -14,9 +14,8 @@ exports.createTask = async (req, reply) => {
 
     // Iterate and process all multipart parts (fields and files)
     // This ensures all incoming stream data is consumed, preventing hangs.
-    for await (const part of parts) { 
-      if (part.file && part.fieldname === 'file') {
-        console.log('📦 File part detected:', part.filename);
+    for await (const part of parts) {
+      if (part.file && part.fieldname === "file") {
         // Buffer the file stream to ensure full consumption
         const buffer = await part.toBuffer();
 
@@ -25,11 +24,9 @@ exports.createTask = async (req, reply) => {
           filename: part.filename,
           mimetype: part.mimetype,
           encoding: part.encoding,
-          buffer: buffer
+          buffer: buffer,
         };
-        console.log(`✅ File '${part.filename}' buffered. Size: ${buffer.length} bytes.`);
-      } else if (part.type === 'field') {
-        console.log('📩 Field detected:', part.fieldname);
+      } else if (part.type === "field") {
         if (formData[part.fieldname]) {
           if (Array.isArray(formData[part.fieldname])) {
             formData[part.fieldname].push(part.value);
@@ -39,13 +36,9 @@ exports.createTask = async (req, reply) => {
         } else {
           formData[part.fieldname] = part.value;
         }
-        console.log(`   Value: ${part.value}`);
       } else {
-        // Log and consume any unhandled part types to prevent stream blocking
-        console.warn(`❓ Unhandled part type detected: ${part.type} with fieldname: ${part.fieldname}`);
         if (part.file) {
           await part.toBuffer();
-          console.warn(`   Consumed unhandled file part: ${part.filename}`);
         }
       }
     }
@@ -55,21 +48,21 @@ exports.createTask = async (req, reply) => {
     // Ensure assignedTo is always an array
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
-      : (assignedTo ? [assignedTo] : []);
+      : assignedTo
+      ? [assignedTo]
+      : [];
 
     let fileUrl = null;
 
     // Process file upload if a file was provided
     if (filePartData) {
-      console.log('⬇ Attempting to upload file...');
       fileUrl = await uploadFile(filePartData, {
-        folder: 'uploads/tasks',
-        allowedExtensions: ['.pdf', '.png', '.jpg', '.jpeg', '.webp'],
+        folder: "uploads/tasks",
+        allowedExtensions: [".pdf", ".png", ".jpg", ".jpeg", ".webp"],
         maxSizeMB: 5,
       });
-      console.log('✅ File uploaded successfully:', fileUrl);
     } else {
-      console.log('ℹ️ No file provided for upload.');
+      console.log("ℹ️ No file provided for upload.");
     }
 
     const task = await Task.create({
@@ -81,30 +74,75 @@ exports.createTask = async (req, reply) => {
       createdBy: req.user.id,
     });
 
-    console.log('Task created in DB:', task);
-
-    return success(reply, 'Task created & assigned successfully', task);
+    return success(reply, "Task created & assigned successfully", task);
   } catch (err) {
-    console.error('🚨 Task Creation Error:', err);
-    return error(reply, 'Failed to create task', err.message);
+    console.error("🚨 Task Creation Error:", err);
+    return error(reply, "Failed to create task", err.message);
   }
 };
 
 exports.updateTask = async (req, reply) => {
   try {
-    const taskId = req.params.id;
-    const { title, description, dueDate, assignedTo, status } = req.body;
+    if (!req.isMultipart()) {
+      return reply.status(400).send({ message: "Request is not multipart" });
+    }
 
-    const assignedList = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
+    const parts = req.parts();
+    const formData = {};
+    let filePartData = null;
+
+    for await (const part of parts) {
+      if (part.file && part.fieldname === "file") {
+        const buffer = await part.toBuffer();
+        filePartData = {
+          fieldname: part.fieldname,
+          filename: part.filename,
+          mimetype: part.mimetype,
+          encoding: part.encoding,
+          buffer: buffer,
+        };
+      } else if (part.type === "field") {
+        if (formData[part.fieldname]) {
+          if (Array.isArray(formData[part.fieldname])) {
+            formData[part.fieldname].push(part.value);
+          } else {
+            formData[part.fieldname] = [formData[part.fieldname], part.value];
+          }
+        } else {
+          formData[part.fieldname] = part.value;
+        }
+      } else {
+        if (part.file) {
+          await part.toBuffer();
+        }
+      }
+    }
+
+    const { title, description, dueDate, assignedTo, status } = formData;
+    const assignedList = Array.isArray(assignedTo)
+      ? assignedTo
+      : assignedTo
+      ? [assignedTo]
+      : [];
+
+    let fileUrl = null;
+    if (filePartData) {
+      fileUrl = await uploadFile(filePartData, {
+        folder: "uploads/tasks",
+        allowedExtensions: [".pdf", ".png", ".jpg", ".jpeg", ".webp"],
+        maxSizeMB: 5,
+      });
+    }
 
     const updated = await Task.findByIdAndUpdate(
-      taskId,
+      req.params.id,
       {
         title,
         description,
         dueDate,
         assignedTo: assignedList,
-        ...(status && { status }) // only update if status is provided
+        ...(status && { status }),
+        ...(fileUrl && { fileUrl }),
       },
       { new: true }
     );
@@ -115,8 +153,8 @@ exports.updateTask = async (req, reply) => {
 
     return success(reply, "Task updated successfully", updated);
   } catch (err) {
-    console.error("Task Update Error:", err);
-    return error(reply);
+    console.error("🚨 Task Update Error:", err);
+    return error(reply, "Failed to update task", err.message);
   }
 };
 
@@ -163,8 +201,8 @@ exports.cancelTask = async (req, reply) => {
       return notFound(reply, "Task not found");
     }
 
-    if (task.status === 'cancelled') {
-      return conflict(reply, 'Task is already cancelled');
+    if (task.status === "cancelled") {
+      return conflict(reply, "Task is already cancelled");
     }
 
     task.status = "cancelled";
