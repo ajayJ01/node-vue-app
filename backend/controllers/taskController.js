@@ -10,38 +10,68 @@ exports.createTask = async (req, reply) => {
 
     const parts = req.parts();
     const formData = {};
-    let filePart = null;
+    let filePartData = null;
 
-    for await (const part of parts) {
+    // Iterate and process all multipart parts (fields and files)
+    // This ensures all incoming stream data is consumed, preventing hangs.
+    for await (const part of parts) { 
       if (part.file && part.fieldname === 'file') {
-        filePart = part;
-        console.log('📦 File received:', part.filename);
+        console.log('📦 File part detected:', part.filename);
+        // Buffer the file stream to ensure full consumption
+        const buffer = await part.toBuffer();
+
+        filePartData = {
+          fieldname: part.fieldname,
+          filename: part.filename,
+          mimetype: part.mimetype,
+          encoding: part.encoding,
+          buffer: buffer
+        };
+        console.log(`✅ File '${part.filename}' buffered. Size: ${buffer.length} bytes.`);
+      } else if (part.type === 'field') {
+        console.log('📩 Field detected:', part.fieldname);
+        if (formData[part.fieldname]) {
+          if (Array.isArray(formData[part.fieldname])) {
+            formData[part.fieldname].push(part.value);
+          } else {
+            formData[part.fieldname] = [formData[part.fieldname], part.value];
+          }
+        } else {
+          formData[part.fieldname] = part.value;
+        }
+        console.log(`   Value: ${part.value}`);
       } else {
-        formData[part.fieldname] = part.value;
-        console.log('📩 Field received:', part.fieldname, '=', part.value);
+        // Log and consume any unhandled part types to prevent stream blocking
+        console.warn(`❓ Unhandled part type detected: ${part.type} with fieldname: ${part.fieldname}`);
+        if (part.file) {
+          await part.toBuffer();
+          console.warn(`   Consumed unhandled file part: ${part.filename}`);
+        }
       }
     }
 
-    console.log('✅ Finished reading parts');
-
     const { title, description, dueDate, assignedTo } = formData;
+
+    // Ensure assignedTo is always an array
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
-      : [assignedTo];
+      : (assignedTo ? [assignedTo] : []);
 
     let fileUrl = null;
 
-    if (filePart) {
-      console.log('⬇ Uploading file...');
-      fileUrl = await uploadFile(filePart, {
+    // Process file upload if a file was provided
+    if (filePartData) {
+      console.log('⬇ Attempting to upload file...');
+      fileUrl = await uploadFile(filePartData, {
         folder: 'uploads/tasks',
         allowedExtensions: ['.pdf', '.png', '.jpg', '.jpeg', '.webp'],
         maxSizeMB: 5,
       });
-      console.log('✅ File uploaded:', fileUrl);
+      console.log('✅ File uploaded successfully:', fileUrl);
+    } else {
+      console.log('ℹ️ No file provided for upload.');
     }
 
-    console.log('🛠 Creating task...');
     const task = await Task.create({
       title,
       description,
@@ -51,11 +81,12 @@ exports.createTask = async (req, reply) => {
       createdBy: req.user.id,
     });
 
-    console.log('✅ Task created:', task._id);
+    console.log('Task created in DB:', task);
+
     return success(reply, 'Task created & assigned successfully', task);
   } catch (err) {
     console.error('🚨 Task Creation Error:', err);
-    return error(reply, 'Failed to create task');
+    return error(reply, 'Failed to create task', err.message);
   }
 };
 

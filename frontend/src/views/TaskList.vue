@@ -31,8 +31,8 @@
               <!-- File Upload -->
               <div class="mb-3">
                 <label for="fileUpload" class="form-label fw-semibold">Upload File (PDF/Image)</label>
-                <input type="file" class="form-control" id="fileUpload" ref="fileInput" accept=".pdf,image/*"
-                  @change="handleFileChange" />
+                <input type="file" class="form-control" id="fileUpload" ref="fileInput" name="file"
+                  accept=".pdf,image/*" @change="handleFileChange" />
                 <!-- Show file name if selected -->
                 <div v-if="file?.name" class="text-success small mt-1">Selected: {{ file.name }}</div>
               </div>
@@ -98,10 +98,11 @@
             <tr>
               <th style="width: 4%;">Sr.</th>
               <th style="width: 17%;">Title</th>
-              <th style="width: 27%;">Description</th>
+              <th style="width: 25%;">Description</th>
               <th style="width: 14%;">Due Date</th>
               <th style="width: 20%;">Assigned To</th>
               <th style="width: 10%;">Status</th>
+              <th style="width: 12%;">Attachmens</th>
               <th style="width: 9%;">Actions</th>
             </tr>
           </thead>
@@ -165,6 +166,24 @@
                     }[task.status] || 'Unknown'
                   }}
                 </span>
+              </td>
+              <td class="attachment-cell">
+                <div v-if="task.fileUrl">
+                  <template v-if="isImage(task.fileUrl)">
+                    <img :src="getFullFileUrl(task.fileUrl)" alt="Image" class="attachment-preview"
+                      :title="task.fileUrl.split('/').pop()" />
+                  </template>
+                  <template v-else>
+                    <a :href="getFullFileUrl(task.fileUrl)" target="_blank" class="attachment-pdf"
+                      :title="task.fileUrl.split('/').pop()">
+                      <i class="bi bi-file-earmark-pdf me-1"></i> View PDF
+                    </a>
+                  </template>
+                </div>
+                <div v-else class="no-file">
+                  <i class="bi bi-file-earmark-x fs-5 text-muted"></i>
+                  <div class="small text-muted">No File</div>
+                </div>
               </td>
               <td class="text-nowrap">
                 <span :title="task.status === 'cancelled' ? 'Cancelled task cannot be edited' : 'Edit Task'">
@@ -462,6 +481,16 @@ const handleTaskEdit = (task) => {
   showBootstrapModal(createTaskModal);
 };
 
+const getFullFileUrl = (relativePath) => {
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/';
+  return `${base.replace(/\/$/, '')}${relativePath}`;
+};
+
+
+const isImage = (filePath) => {
+  return /\.(jpg|jpeg|png|webp)$/i.test(filePath);
+}
+
 onMounted(async () => {
   await fetchTasks();
 
@@ -479,59 +508,67 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.bg-purple {
-  background-color: #6f42c1 !important;
+.table {
+  table-layout: fixed;
+  width: 100%;
 }
 
-.text-truncate {
+.table td,
+.table th {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.table {
-  table-layout: fixed;
+td:nth-child(3) {
+  max-width: 220px;
+  /* Limit description column */
 }
 
-.table th,
-.table td {
-  vertical-align: middle;
-  padding: 8px;
+.attachment-cell {
+  text-align: center;
 }
 
-.assigned-to-cell {
+.attachment-preview {
+  max-width: 48px;
+  max-height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #dee2e6;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.attachment-preview:hover {
+  transform: scale(1.4);
+  z-index: 10;
   position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
 }
 
-.badge-container {
-  display: flex;
+.attachment-pdf {
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.badge-container .badge {
-  margin: 0;
+  padding: 4px 10px;
   font-size: 0.75rem;
+  color: #0d6efd;
+  background-color: #eef6ff;
+  border-radius: 6px;
+  text-decoration: none;
+  border: 1px solid #cce5ff;
+  transition: background 0.2s ease-in-out;
 }
 
-.toggle-badge {
-  margin-left: 4px;
-  font-size: 0.75rem;
+.attachment-pdf:hover {
+  background-color: #d4ebff;
+  text-decoration: none;
 }
 
-.expanded-content {
-  margin-top: 4px;
+.no-file {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.expanded-content .badge {
+  flex-direction: column;
+  align-items: center;
   font-size: 0.75rem;
-}
-
-.table td:not(.assigned-to-cell) {
-  white-space: nowrap;
+  color: #6c757d;
 }
 </style>

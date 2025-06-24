@@ -1,4 +1,7 @@
 require('dotenv').config();
+const fastifyStatic = require('@fastify/static');
+const path = require('path');
+
 const fastify = require('fastify')({
   logger: {
     level: 'debug',
@@ -14,7 +17,7 @@ const fastify = require('fastify')({
 });
 const connectDB = require('./config/db');
 const fastifyCors = require('@fastify/cors');
-const fastifyMultipart = require('@fastify/multipart'); // ✅ imported here to register with options
+const fastifyMultipart = require('@fastify/multipart');
 
 // 1️⃣ Connect to MongoDB
 connectDB();
@@ -32,6 +35,11 @@ fastify.register(fastifyMultipart, {
     fileSize: 5 * 1024 * 1024, // 5 MB max
     files: 1,
   }
+});
+
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, 'uploads'),
+  prefix: '/uploads/',
 });
 
 // 4️⃣ Health check route
