@@ -14,7 +14,6 @@ export const request = async (method, url, data = {}, config = {}) => {
     if (isFormData && headers['Content-Type']) {
       delete headers['Content-Type']
     }
-    console.log(data)
     const response = await api({
       method,
       url,

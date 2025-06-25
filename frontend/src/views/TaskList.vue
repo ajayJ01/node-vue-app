@@ -66,7 +66,6 @@
                 <label for="floatingDueDate">Due Date</label>
               </div>
 
-
               <!-- Status Dropdown (only in edit mode) -->
               <div v-if="editingTask" class="form-floating mb-3">
                 <select v-model="status" class="form-select" id="floatingStatus" required>
@@ -82,7 +81,8 @@
               <div class="mb-4">
                 <label class="form-label fw-semibold">Assign To</label>
                 <multiselect v-model="assignedTo" :options="users" :custom-label="customLabel" track-by="_id"
-                  placeholder="Select users" :multiple="true" :close-on-select="false" />
+                  placeholder="Select users" :multiple="true" :close-on-select="false"
+                  class="form-control-sm rounded shadow-sm border" />
               </div>
 
               <!-- Submit Button -->
@@ -107,6 +107,43 @@
         </button>
       </div>
 
+      <!-- Filters Row -->
+      <div class="row g-3 align-items-end mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Search</label>
+          <input v-model="filters.search" type="text" class="form-control"
+            placeholder="Search title or description..." />
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Status</label>
+          <select v-model="filters.status" class="form-select">
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="submitted">Submitted</option>
+            <option value="verified">Done</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <!-- Date Range -->
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Due Date Range</label>
+          <input v-model="filters.dateRange" type="text" class="form-control" placeholder="Select date range"
+            @focus="showDateRangePicker" readonly />
+        </div>
+
+        <!-- Assigned To -->
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Assigned User</label>
+          <multiselect v-model="filters.assignedTo" :options="users" :multiple="true" :close-on-select="false"
+            placeholder="Filter by User" label="name" track-by="_id" class="w-100" />
+        </div>
+      </div>
+
       <!-- Task Table -->
       <div class="table-responsive">
         <table class="table align-middle text-nowrap table-sm">
@@ -116,7 +153,7 @@
               <th style="width: 17%;">Title</th>
               <th style="width: 25%;">Description</th>
               <th style="width: 14%;">Due Date</th>
-              <th style="width: 20%;">Assigned To</th>
+              <th style="width: 21%;">Assigned To</th>
               <th style="width: 10%;">Status</th>
               <th style="width: 12%;">Attachmens</th>
               <th style="width: 9%;">Actions</th>
@@ -186,8 +223,9 @@
               <td class="attachment-cell">
                 <div v-if="task.fileUrl">
                   <template v-if="isImage(task.fileUrl)">
-                    <img :src="getFullFileUrl(task.fileUrl)" alt="Image" class="attachment-preview"
-                      :title="task.fileUrl.split('/').pop()" />
+                    <a :href="getFullFileUrl(task.fileUrl)" target="_blank" :title="task.fileUrl.split('/').pop()">
+                      <img :src="getFullFileUrl(task.fileUrl)" alt="Image" class="attachment-preview" />
+                    </a>
                   </template>
                   <template v-else>
                     <a :href="getFullFileUrl(task.fileUrl)" target="_blank" class="attachment-pdf"
@@ -242,13 +280,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, getCurrentInstance, nextTick, computed } from "vue";
+import { ref, reactive, onMounted, getCurrentInstance, nextTick, computed, watch } from "vue";
 import { request } from "@/services/apiWrapper";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.css";
 import { hideBootstrapModal, showBootstrapModal } from "@/utils/bootstrapModal.js";
 import BasePagination from "@/components/BasePagination.vue";
 import Swal from 'sweetalert2';
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
 
 defineOptions({ components: { Multiselect } });
 
@@ -267,6 +307,25 @@ const perPage = ref(10);
 const createTaskModal = ref(null);
 const editingTask = ref(null);
 const expandedRows = ref([]);
+
+const filters = reactive({
+  search: '',
+  status: '',
+  dateRange: '',
+  assignedTo: []
+});
+
+const showDateRangePicker = () => {
+  flatpickr(document.querySelector('input[placeholder="Select date range"]'), {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    onClose: (selectedDates) => {
+      if (selectedDates.length === 2) {
+        filters.dateRange = `${selectedDates[0].toISOString().slice(0, 10)} to ${selectedDates[1].toISOString().slice(0, 10)}`;
+      }
+    }
+  }).open();
+};
 
 const isMinDateDisabled = computed(() => {
   return status.value === 'verified';
@@ -352,10 +411,27 @@ const formatDate = (dateStr) => {
 const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
 
 const fetchTasks = async (page = 1) => {
-  const [data, error] = await request(
-    "get",
-    `/tasks?page=${page}&limit=${perPage.value}`
+  const raw = {
+    page,
+    limit: perPage.value,
+    search: filters.search?.trim(),
+    status: filters.status,
+    from: filters.dateRange?.split(" to ")[0],
+    to: filters.dateRange?.split(" to ")[1],
+    assignedTo: filters.assignedTo.length
+      ? filters.assignedTo.map(u => u._id).join(",")
+      : null
+  };
+
+  const params = Object.fromEntries(
+    Object.entries(raw).filter(
+      ([_, v]) => v !== undefined && v !== null && v !== ""
+    )
   );
+
+  const query = new URLSearchParams(params).toString();
+  const [data, error] = await request("get", `/tasks?${query}`);
+
   if (error) {
     toast.error(error.message || "Failed to load tasks");
   } else {
@@ -521,6 +597,19 @@ onMounted(async () => {
     });
   }
 });
+
+watch(
+  () => ({
+    ...filters,
+    perPage: perPage.value,
+    page: currentPage.value
+  }),
+  () => {
+    fetchTasks(currentPage.value);
+  },
+  { deep: true }
+);
+
 </script>
 
 <style scoped>
@@ -586,5 +675,25 @@ td:nth-child(3) {
   align-items: center;
   font-size: 0.75rem;
   color: #6c757d;
+}
+
+input.form-control::placeholder,
+select.form-select {
+  font-size: 14px;
+}
+
+.multiselect {
+  min-height: 38px;
+  font-size: 14px;
+}
+
+input[readonly] {
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.multiselect__tags {
+  min-height: 38px !important;
+  padding: 5px 8px !important;
 }
 </style>

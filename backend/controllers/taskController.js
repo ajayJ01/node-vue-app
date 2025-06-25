@@ -49,8 +49,8 @@ exports.createTask = async (req, reply) => {
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
       : assignedTo
-      ? [assignedTo]
-      : [];
+        ? [assignedTo]
+        : [];
 
     let fileUrl = null;
 
@@ -122,8 +122,8 @@ exports.updateTask = async (req, reply) => {
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
       : assignedTo
-      ? [assignedTo]
-      : [];
+        ? [assignedTo]
+        : [];
 
     let fileUrl = null;
     if (filePartData) {
@@ -161,19 +161,51 @@ exports.updateTask = async (req, reply) => {
 exports.getAllTasks = async (req, reply) => {
   try {
     const userId = req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { page = 1, limit = 10, search, status, from, to, assignedTo } = req.query;
     const skip = (page - 1) * limit;
 
     const filter = {
-      $or: [{ createdBy: userId }, { assignedTo: userId }],
+      $and: [
+        {
+          $or: [{ createdBy: userId }, { assignedTo: userId }]
+        }
+      ]
     };
 
-    const totalCount = await Task.countDocuments(filter);
+    if (search) {
+      filter.$and.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
 
+    if (status) {
+      filter.$and.push({ status });
+    }
+
+    if (from && to) {
+      filter.$and.push({
+        dueDate: {
+          $gte: new Date(from),
+          $lte: new Date(to + 'T23:59:59')
+        }
+      });
+    }
+
+    if (assignedTo) {
+      const assignedIds = assignedTo.split(',');
+      filter.$and.push({
+        assignedTo: { $in: assignedIds }
+      });
+    }
+
+    const totalCount = await Task.countDocuments(filter);
+    console.log('filter is :',filter)
     const tasks = await Task.find(filter)
       .skip(skip)
-      .limit(limit)
+      .limit(parseInt(limit))
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
@@ -181,7 +213,7 @@ exports.getAllTasks = async (req, reply) => {
     return success(reply, "Tasks fetched successfully", {
       tasks,
       totalPages: Math.ceil(totalCount / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       totalCount,
     });
   } catch (err) {
