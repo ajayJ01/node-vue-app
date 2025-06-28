@@ -38,7 +38,7 @@
               </div>
 
               <!-- Show File Preview if editing -->
-              <div v-if="editingTask?.fileUrl" class="mb-3">
+              <tr v-if="editingTask?.fileUrl" class="mb-3">
                 <td class="attachment-cell">
                   <div v-if="editingTask.fileUrl">
                     <template v-if="isImage(editingTask.fileUrl)">
@@ -57,7 +57,7 @@
                     <div class="small text-muted">No File</div>
                   </div>
                 </td>
-              </div>
+              </tr>
 
               <!-- Due Date -->
               <div class="form-floating mb-3">
