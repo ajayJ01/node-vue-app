@@ -44,6 +44,7 @@ fastify.get("/", async (req, reply) => {
 
 // 5️⃣ Register Routes (after plugins)
 fastify.register(require("./routes/authRoutes"));
+fastify.register(require("./routes/userRoutes"));
 fastify.register(require("./routes/taskRoutes"));
 
 // 6️⃣ Global Error Handler (406-safe)

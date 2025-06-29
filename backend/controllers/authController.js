@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
-const { success, error, validationError } = require("../utils/response");
+const { success, error } = require("../utils/response");
 
 exports.registerUser = async (req, reply) => {
   try {
@@ -44,24 +44,6 @@ exports.loginUser = async (req, reply) => {
     }
   } catch (err) {
     console.error("Login error:", err);
-    return error(reply);
-  }
-};
-
-exports.getProfile = async (req, reply) => {
-  try {
-    reply.send({ message: "Profile fetched", user: req.user });
-  } catch (err) {
-    reply.code(500).send({ message: "Server Error" });
-  }
-};
-
-exports.getAllNormalUsers = async (req, reply) => {
-  try {
-    const users = await User.find({ role: "user" }).select("-password");
-    return success(reply, "Users fetched successfully", users);
-  } catch (err) {
-    console.error("Get Users Error:", err.message);
     return error(reply);
   }
 };

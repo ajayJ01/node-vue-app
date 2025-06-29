@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { h } from 'vue'
+import { jwtDecode } from 'jwt-decode'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import AdminDashboard from '../views/AdminDashboard.vue'
@@ -47,14 +48,34 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const role = localStorage.getItem('role')
 
-  if (to.meta.requiresAuth && !token) {
-    // Not logged in
-    next('/login')
-  } else if (to.meta.requiresAdmin && role !== 'admin') {
-    next('/dashboard') // redirect to user's dashboard
-  } else {
-    next()
+  if (to.meta.requiresAuth) {
+    if (!token) {
+      return next({ path: '/login', query: { reason: 'no_token' } })
+    }
+
+    try {
+      const decoded = jwtDecode(token)
+      const currentTime = Date.now() / 1000
+
+      if (decoded.exp < currentTime) {
+        // Token expired
+        localStorage.removeItem('token')
+        localStorage.removeItem('role')
+        return next({ path: '/login', query: { reason: 'expired' } })
+      }
+    } catch (error) {
+      // Invalid token
+      localStorage.removeItem('token')
+      localStorage.removeItem('role')
+      return next({ path: '/login', query: { reason: 'invalid' } })
+    }
   }
+
+  if (to.meta.requiresAdmin && role !== 'admin') {
+    return next('/dashboard')
+  }
+
+  next()
 })
 
 export default router
