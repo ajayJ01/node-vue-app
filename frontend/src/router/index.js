@@ -6,6 +6,7 @@ import Register from '../views/Register.vue'
 import AdminDashboard from '../views/AdminDashboard.vue'
 import UserDashboard from '../views/UserDashboard.vue'
 import TaskList from '../views/TaskList.vue'
+import MyTasks from '../views/MyTasks.vue'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
@@ -25,6 +26,12 @@ const routes = [
     component: AdminDashboard,
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [{ path: '', component: TaskList }],
+  },
+  {
+    path: '/my-tasks',
+    component: UserDashboard,
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: MyTasks }],
   },
   {
     path: '/user/create',

@@ -102,6 +102,19 @@
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h4 class="text-primary m-0"><i class="bi bi-list-check me-2"></i>Task List</h4>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-success btn-sm px-3 d-flex align-items-center gap-1 shadow-sm"
+            @click="handleExportExcel">
+            <i class="bi bi-file-earmark-excel"></i>
+            <span>Export Excel</span>
+          </button>
+
+          <button class="btn btn-outline-danger btn-sm px-3 d-flex align-items-center gap-1 shadow-sm"
+            @click="handleExportPDF">
+            <i class="bi bi-file-earmark-pdf"></i>
+            <span>Export PDF</span>
+          </button>
+        </div>
         <button class="btn btn-outline-primary btn-sm" @click="openCreateModal">
           <i class="bi bi-plus-circle me-1"></i> New Task
         </button>
@@ -249,7 +262,7 @@
 
                 <span :title="task.status === 'cancelled' ? 'Task already cancelled' : 'Cancel Task'">
                   <button @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger"
-                    :disabled="task.status === 'cancelled'">
+                    :disabled="task.status === 'cancelled' || task.status === 'verified'">
                     <i class="bi bi-x-circle"></i>
                   </button>
                 </span>
@@ -289,6 +302,7 @@ import BasePagination from "@/components/BasePagination.vue";
 import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
+import { useExport } from "@/composables/useExport";
 
 defineOptions({ components: { Multiselect } });
 
@@ -316,9 +330,17 @@ const filters = reactive({
 });
 
 const showDateRangePicker = () => {
+  const today = new Date();
+  const tenYearsLater = new Date();
+  tenYearsLater.setFullYear(today.getFullYear() + 10);
+  const tenYearsAgo = new Date();
+  tenYearsAgo.setFullYear(today.getFullYear() - 10);
+
   flatpickr(document.querySelector('input[placeholder="Select date range"]'), {
     mode: "range",
     dateFormat: "Y-m-d",
+    maxDate: tenYearsLater,
+    minDate: tenYearsAgo,
     onClose: (selectedDates) => {
       if (selectedDates.length === 2) {
         filters.dateRange = `${selectedDates[0].toISOString().slice(0, 10)} to ${selectedDates[1].toISOString().slice(0, 10)}`;
@@ -406,6 +428,16 @@ const formatDate = (dateStr) => {
   const formattedHour = hours % 12 || 12;
 
   return `${day} ${month}, ${formattedHour}:${minutes} ${ampm}`;
+};
+
+const handleExportExcel = () => {
+  const { exportToExcel } = useExport(tasks.value, formatDate, currentPage.value, perPage.value);
+  exportToExcel();
+};
+
+const handleExportPDF = () => {
+  const { exportToPDF } = useExport(tasks.value, formatDate, currentPage.value, perPage.value);
+  exportToPDF();
 };
 
 const customLabel = (user) => (user?.name ? `${user.name} (${user.email})` : "Unknown");
@@ -613,6 +645,16 @@ watch(
 </script>
 
 <style scoped>
+.btn-outline-success:hover {
+  background-color: #198754;
+  color: white;
+}
+
+.btn-outline-danger:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
 .table {
   table-layout: fixed;
   width: 100%;
