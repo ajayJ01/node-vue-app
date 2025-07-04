@@ -49,8 +49,8 @@ exports.createTask = async (req, reply) => {
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
       : assignedTo
-        ? [assignedTo]
-        : [];
+      ? [assignedTo]
+      : [];
 
     let fileUrl = null;
 
@@ -122,8 +122,8 @@ exports.updateTask = async (req, reply) => {
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
       : assignedTo
-        ? [assignedTo]
-        : [];
+      ? [assignedTo]
+      : [];
 
     let fileUrl = null;
     if (filePartData) {
@@ -161,23 +161,31 @@ exports.updateTask = async (req, reply) => {
 exports.getAllTasks = async (req, reply) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 10, search, status, from, to, assignedTo } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status,
+      from,
+      to,
+      assignedTo,
+    } = req.query;
     const skip = (page - 1) * limit;
 
     const filter = {
       $and: [
         {
-          $or: [{ createdBy: userId }, { assignedTo: userId }]
-        }
-      ]
+          $or: [{ createdBy: userId }, { assignedTo: userId }],
+        },
+      ],
     };
 
     if (search) {
       filter.$and.push({
         $or: [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } }
-        ]
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ],
       });
     }
 
@@ -189,20 +197,20 @@ exports.getAllTasks = async (req, reply) => {
       filter.$and.push({
         dueDate: {
           $gte: new Date(from),
-          $lte: new Date(to + 'T23:59:59')
-        }
+          $lte: new Date(to + "T23:59:59"),
+        },
       });
     }
 
     if (assignedTo) {
-      const assignedIds = assignedTo.split(',');
+      const assignedIds = assignedTo.split(",");
       filter.$and.push({
-        assignedTo: { $in: assignedIds }
+        assignedTo: { $in: assignedIds },
       });
     }
 
     const totalCount = await Task.countDocuments(filter);
-    console.log('filter is :',filter)
+
     const tasks = await Task.find(filter)
       .skip(skip)
       .limit(parseInt(limit))
@@ -218,6 +226,66 @@ exports.getAllTasks = async (req, reply) => {
     });
   } catch (err) {
     console.error("Fetch Tasks Error:", err);
+    return error(reply);
+  }
+};
+
+exports.getMyTasks = async (req, reply) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 10, search, status, from, to } = req.query;
+    const skip = (page - 1) * limit;
+
+    const filter = {
+      assignedTo: userId,
+    };
+
+    const andConditions = [];
+
+    if (search) {
+      andConditions.push({
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ],
+      });
+    }
+
+    if (status) {
+      andConditions.push({ status });
+    }
+
+    if (from && to) {
+      andConditions.push({
+        dueDate: {
+          $gte: new Date(from),
+          $lte: new Date(to + "T23:59:59"),
+        },
+      });
+    }
+
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
+    }
+
+    const totalCount = await Task.countDocuments(filter);
+
+    const tasks = await Task.find(filter)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
+
+    console.log("tasks is :", tasks);
+    return success(reply, "My Tasks fetched successfully", {
+      tasks,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: parseInt(page),
+      totalCount,
+    });
+  } catch (err) {
+    console.error("Fetch My Tasks Error:", err);
     return error(reply);
   }
 };

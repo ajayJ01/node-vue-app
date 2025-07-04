@@ -7,7 +7,7 @@
           <i class="bi bi-list"></i>
         </button>
         <h4 class="mb-0 text-dark fw-semibold d-flex align-items-center">
-          <img src="/public/logo.png" alt="WorkSync Logo" class="header-logo" /> WorkSync
+          <img src="/logo.png" alt="WorkSync Logo" class="header-logo" /> WorkSync
         </h4>
       </div>
       <span class="text-dark fw-semibold"> 👋 Hello, {{ userName }} </span>
@@ -98,7 +98,6 @@ const logout = () => {
 </script>
 
 <style scoped>
-
 .header-sticky {
   position: fixed;
   top: 0;

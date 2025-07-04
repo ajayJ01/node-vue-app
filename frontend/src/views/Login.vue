@@ -24,28 +24,38 @@
           <i class="bi bi-box-arrow-in-right me-2"></i>Login
         </button>
       </form>
-
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, getCurrentInstance, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { request } from '@/services/apiWrapper'
 
 const email = ref('')
 const password = ref('')
 const router = useRouter()
+const route = useRoute()
 
 const { appContext } = getCurrentInstance()
 const toast = appContext.config.globalProperties.$toast
 
 onMounted(() => {
-  const logout = localStorage.getItem("logout");
+  const logout = localStorage.getItem('logout')
   if (logout) {
-    toast.success(logout);
-    localStorage.removeItem("logout");
+    toast.success(logout)
+    localStorage.removeItem('logout')
+  }
+
+  // ✅ Show session expired / invalid / no token messages
+  const reason = route.query.reason
+  if (reason === 'expired') {
+    toast.error('Session expired. Please log in again.')
+  } else if (reason === 'invalid') {
+    toast.error('Invalid session. Please log in again.')
+  } else if (reason === 'no_token') {
+    toast.error('You must be logged in to access that page.')
   }
 })
 
@@ -53,7 +63,7 @@ const handleLogin = async () => {
   try {
     const [data, error] = await request('post', '/login', {
       email: email.value,
-      password: password.value
+      password: password.value,
     })
 
     if (error) {
