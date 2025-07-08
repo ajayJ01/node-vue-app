@@ -48,8 +48,8 @@ onMounted(() => {
     localStorage.removeItem('logout')
   }
 
-  // ✅ Show session expired / invalid / no token messages
   const reason = route.query.reason
+
   if (reason === 'expired') {
     toast.error('Session expired. Please log in again.')
   } else if (reason === 'invalid') {
@@ -57,7 +57,17 @@ onMounted(() => {
   } else if (reason === 'no_token') {
     toast.error('You must be logged in to access that page.')
   }
+
+  // ✅ Remove `reason` from query params
+  const { reason: _ignore, ...restQuery } = route.query
+  router.replace({ path: route.path, query: restQuery })
+
+  document.body.classList.remove('modal-open', 'overflow-hidden')
+  document.querySelector('.modal-backdrop')?.remove()
+  document.querySelector('.fade.show')?.remove()
+
 })
+
 
 const handleLogin = async () => {
   try {
