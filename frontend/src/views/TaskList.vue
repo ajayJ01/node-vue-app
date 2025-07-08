@@ -72,6 +72,7 @@
                   <option value="pending">Pending</option>
                   <option v-if="status === 'in_progress'" value="in_progress">In Progress</option>
                   <option v-if="status === 'submitted'" value="submitted">Submitted</option>
+                  <option v-if="status === 'due'" value="due">Expired</option>
                   <option value="verified">Done</option>
                 </select>
                 <label for="floatingStatus">Task Status</label>
@@ -139,6 +140,7 @@
             <option value="submitted">Submitted</option>
             <option value="verified">Done</option>
             <option value="cancelled">Cancelled</option>
+            <option value="due">Expired</option>
           </select>
         </div>
 
@@ -212,7 +214,8 @@
                       task.status === 'submitted' ? 'bg-purple text-white' :
                         task.status === 'verified' ? 'bg-success text-white' :
                           task.status === 'cancelled' ? 'bg-danger text-white' :
-                            'bg-secondary text-white'
+                            task.status === 'due' ? 'bg-dark text-white' :
+                              'bg-secondary text-white'
                 ]">
                   <i :class="{
                     'bi-hourglass-split': task.status === 'pending',
@@ -220,6 +223,7 @@
                     'bi-upload': task.status === 'submitted',
                     'bi-check-circle': task.status === 'verified',
                     'bi-x-circle': task.status === 'cancelled',
+                    'bi-clock-exclamation': task.status === 'due',
                     'bi-question-circle': !task.status
                   }"></i>
                   {{
@@ -228,7 +232,8 @@
                       in_progress: 'Progress',
                       submitted: 'Submitted',
                       verified: 'Done',
-                      cancelled: 'Cancelled'
+                      cancelled: 'Cancelled',
+                      due: 'Expired'
                     }[task.status] || 'Unknown'
                   }}
                 </span>
@@ -262,7 +267,7 @@
 
                 <span :title="task.status === 'cancelled' ? 'Task already cancelled' : 'Cancel Task'">
                   <button @click="handleTaskCancel(task)" class="btn btn-sm btn-outline-danger"
-                    :disabled="task.status === 'cancelled' || task.status === 'verified'">
+                    :disabled="task.status === 'cancelled' || task.status === 'verified' || task.status === 'due'">
                     <i class="bi bi-x-circle"></i>
                   </button>
                 </span>

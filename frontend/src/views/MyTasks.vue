@@ -38,6 +38,7 @@
                         <option value="submitted">Submitted</option>
                         <option value="verified">Done</option>
                         <option value="cancelled">Cancelled</option>
+                        <option value="due">Expired</option>
                     </select>
                 </div>
 
@@ -69,20 +70,23 @@
                             <td>{{ formatDate(task.dueDate) }}</td>
                             <td>
                                 <span :class="[
-                                    'badge rounded-pill small fw-semibold d-inline-flex align-items-center gap-1',
+                                    'badge d-inline-flex align-items-center gap-1 rounded-pill fw-semibold small',
                                     task.status === 'pending' ? 'bg-warning text-dark' :
                                         task.status === 'in_progress' ? 'bg-primary text-white' :
                                             task.status === 'submitted' ? 'bg-purple text-white' :
                                                 task.status === 'verified' ? 'bg-success text-white' :
                                                     task.status === 'cancelled' ? 'bg-danger text-white' :
-                                                        'bg-secondary text-white'
+                                                        task.status === 'due' ? 'bg-dark text-white' :
+                                                            'bg-secondary text-white'
                                 ]">
                                     <i :class="{
                                         'bi-hourglass-split': task.status === 'pending',
                                         'bi-arrow-repeat': task.status === 'in_progress',
                                         'bi-upload': task.status === 'submitted',
                                         'bi-check-circle': task.status === 'verified',
-                                        'bi-x-circle': task.status === 'cancelled'
+                                        'bi-x-circle': task.status === 'cancelled',
+                                        'bi-clock-exclamation': task.status === 'due',
+                                        'bi-question-circle': !task.status
                                     }"></i>
                                     {{
                                         {
@@ -90,7 +94,8 @@
                                             in_progress: 'Progress',
                                             submitted: 'Submitted',
                                             verified: 'Done',
-                                            cancelled: 'Cancelled'
+                                            cancelled: 'Cancelled',
+                                            due: 'Expired'
                                         }[task.status] || 'Unknown'
                                     }}
                                 </span>

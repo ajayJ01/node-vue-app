@@ -4,6 +4,11 @@ const path = require('path');
 
 module.exports = defineConfig({
   plugins: [vue()],
+    server: {
+    host: 'localhost',
+    port: 5173,
+    open: '/login',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

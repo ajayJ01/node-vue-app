@@ -9,7 +9,7 @@ import TaskList from '../views/TaskList.vue'
 import MyTasks from '../views/MyTasks.vue'
 
 const routes = [
-  { path: '/', redirect: '/dashboard' },
+  { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
   {
     path: '/dashboard',

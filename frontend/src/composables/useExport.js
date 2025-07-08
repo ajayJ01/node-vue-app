@@ -76,6 +76,7 @@ export function useExport(tasks, formatDate, currentPage = 1, perPage = 10) {
       submitted: 'Submitted',
       verified: 'Done',
       cancelled: 'Cancelled',
+      due: 'Expired',
     }
 
     return map[status] || 'Unknown'

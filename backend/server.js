@@ -16,6 +16,7 @@ const fastifyMultipart = require("@fastify/multipart");
 
 // 1️⃣ Connect to MongoDB
 connectDB();
+require("./cron/updateDueTasks");
 
 // 2️⃣ Enable CORS
 fastify.register(fastifyCors, {

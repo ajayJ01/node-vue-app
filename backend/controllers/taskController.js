@@ -277,7 +277,6 @@ exports.getMyTasks = async (req, reply) => {
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
 
-    console.log("tasks is :", tasks);
     return success(reply, "My Tasks fetched successfully", {
       tasks,
       totalPages: Math.ceil(totalCount / limit),
