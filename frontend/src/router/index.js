@@ -55,29 +55,32 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const role = localStorage.getItem('role')
 
-  if (to.meta.requiresAuth) {
-    if (!token) {
-      return next({ path: '/login', query: { reason: 'no_token' } })
-    }
-
-    try {
-      const decoded = jwtDecode(token)
-      const currentTime = Date.now() / 1000
-
-      if (decoded.exp < currentTime) {
-        // Token expired
-        localStorage.removeItem('token')
-        localStorage.removeItem('role')
-        return next({ path: '/login', query: { reason: 'expired' } })
-      }
-    } catch (error) {
-      // Invalid token
-      localStorage.removeItem('token')
-      localStorage.removeItem('role')
-      return next({ path: '/login', query: { reason: 'invalid' } })
-    }
+  if (!to.meta.requiresAuth) {
+    return next()
   }
 
+  if (!token) {
+    return next({ path: '/login', query: { reason: 'no_token' } })
+  }
+
+  try {
+    const decoded = jwtDecode(token)
+    const currentTime = Date.now() / 1000
+
+    if (decoded.exp < currentTime) {
+      // Token expired
+      localStorage.removeItem('token')
+      localStorage.removeItem('role')
+      return next({ path: '/login', query: { reason: 'expired' } })
+    }
+  } catch (error) {
+    // Token invalid
+    localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    return next({ path: '/login', query: { reason: 'invalid' } })
+  }
+
+  // Admin route access control
   if (to.meta.requiresAdmin && role !== 'admin') {
     return next('/dashboard')
   }
