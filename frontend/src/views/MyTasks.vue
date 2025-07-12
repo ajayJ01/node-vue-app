@@ -60,12 +60,13 @@
                             <th>Due Date</th>
                             <th>Status</th>
                             <th>Attachment</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(task, index) in tasks" :key="task._id">
                             <td>{{ (currentPage - 1) * perPage + index + 1 }}</td>
-                            <td :title="task.title">{{ task.title }}</td>
+                            <td class="text-truncate" :title="task.title">{{ task.title }}</td>
                             <td class="text-truncate" :title="task.description">{{ task.description }}</td>
                             <td>{{ formatDate(task.dueDate) }}</td>
                             <td>
@@ -73,7 +74,7 @@
                                     'badge d-inline-flex align-items-center gap-1 rounded-pill fw-semibold small',
                                     task.status === 'pending' ? 'bg-warning text-dark' :
                                         task.status === 'in_progress' ? 'bg-primary text-white' :
-                                            task.status === 'submitted' ? 'bg-purple text-white' :
+                                            task.status === 'submitted' ? 'bg-submitted' :
                                                 task.status === 'verified' ? 'bg-success text-white' :
                                                     task.status === 'cancelled' ? 'bg-danger text-white' :
                                                         task.status === 'due' ? 'bg-dark text-white' :
@@ -119,6 +120,65 @@
                                 </div>
                                 <div v-else class="text-muted small">No File</div>
                             </td>
+                            <td>
+                                <div class="d-flex gap-2 flex-wrap">
+
+                                    <!-- PENDING -->
+                                    <template v-if="task.status === 'pending'">
+                                        <button class="btn btn-sm btn-outline-primary" @click="markTaskStarted(task)"
+                                            title="Start this task">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+
+                                        <button class="btn btn-sm btn-outline-success" @click="openCompleteModal(task)"
+                                            title="Mark as completed">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </template>
+
+                                    <!-- IN PROGRESS -->
+                                    <template v-else-if="task.status === 'in_progress'">
+                                        <span title="In progress Task">
+                                            <button class="btn btn-sm btn-outline-warning" disabled>
+                                                <i class="bi bi-hourglass-split"></i>
+                                            </button>
+                                        </span>
+
+                                        <button class="btn btn-sm btn-outline-success" @click="openCompleteModal(task)"
+                                            title="Submit completed task">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </template>
+
+                                    <!-- SUBMITTED -->
+                                    <template v-else-if="task.status === 'submitted'">
+                                        <span title="Waiting for admin verification">
+                                            <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                <i class="bi bi-upload"></i>
+                                            </button>
+                                        </span>
+                                    </template>
+
+                                    <!-- VERIFIED -->
+                                    <template v-else-if="task.status === 'verified'">
+                                        <span title="Task is verified and done">
+                                            <button class="btn btn-sm btn-success" disabled>
+                                                <i class="bi bi-patch-check"></i>
+                                            </button>
+                                        </span>
+                                    </template>
+
+                                    <!-- CANCELLED / DUE -->
+                                    <template v-else>
+                                        <span title="Task is no longer available">
+                                            <button class="btn btn-sm btn-outline-dark" disabled>
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </span>
+                                    </template>
+
+                                </div>
+                            </td>
                         </tr>
                         <tr v-if="tasks.length === 0">
                             <td colspan="6" class="text-center text-muted py-4">No tasks found.</td>
@@ -137,6 +197,34 @@
                 <BasePagination :currentPage="currentPage" :totalPages="totalPages" @page-change="changePage" />
             </div>
         </div>
+
+        <!-- Complete Task Modal -->
+        <div class="modal fade" ref="completeModal" tabindex="-1" aria-labelledby="completeModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 shadow-sm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="completeModalLabel">Complete Task</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div>
+                            <label class="form-label fw-semibold">Completion Notes</label>
+                            <textarea class="form-control" ref="notesRef" rows="3"
+                                placeholder="Enter any notes about task completion..."></textarea>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label fw-semibold">Upload Attachment (Optional)</label>
+                            <input type="file" class="form-control" @change="handleFileUpload" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" @click="submitCompletion">Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -148,19 +236,111 @@ import BasePagination from "@/components/BasePagination.vue";
 import { useToast } from "@/composables/useToast";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
+import { hideBootstrapModal, showBootstrapModal } from "@/utils/bootstrapModal.js";
 
 const toast = useToast();
-
 const tasks = ref([]);
 const currentPage = ref(1);
 const perPage = ref(10);
 const totalPages = ref(1);
+const selectedTask = ref(null);
+const notesRef = ref(null);
+const completeModal = ref(null);
+
+const completionData = ref({
+    notes: '',
+    file: null
+});
 
 const filters = reactive({
     search: '',
     status: '',
     dateRange: '',
 });
+
+const openCompleteModal = (task) => {
+    selectedTask.value = task;
+    completionData.notes = '';
+    completionData.file = null;
+    showBootstrapModal(completeModal);
+};
+
+const markTaskStarted = async (task) => {
+    const [res, err] = await request("post", `/my-tasks/${task._id}/start`);
+
+    if (err) {
+        toast.error(err.message || "Failed to start task");
+    } else {
+        const msg = res?.message?.trim() || "Task marked as started.";
+        toast.success(msg);
+        fetchTasks();
+    }
+};
+
+const handleFileUpload = e => {
+
+    const selected = e.target.files[0];
+    if (!selected) return;
+
+    const validTypes = [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp",
+    ];
+    const maxSizeMB = 5; // Max file size in MB
+
+    if (!validTypes.includes(selected.type)) {
+        const allowed = ["PDF", "PNG", "JPEG", "JPG", "WEBP"].join(", ");
+        toast.error(`Invalid file type. Allowed types: ${allowed}`);
+        file.value = null;
+        return;
+    }
+
+    const fileSizeMB = selected.size / (1024 * 1024);
+    if (fileSizeMB > maxSizeMB) {
+        toast.error(`File too large. Max allowed size is ${maxSizeMB}MB.`);
+        file.value = null;
+        return;
+    }
+
+    completionData.value.file = selected;
+};
+
+const submitCompletion = async () => {
+    completionData.value.notes = notesRef.value?.value?.trim() || '';
+
+    if (!completionData.value.notes) {
+        toast.error("Please provide completion notes.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("notes", completionData.value.notes);
+
+    if (completionData.value.file) {
+        formData.append("file", completionData.value.file);
+    }
+
+    const [res, err] = await request(
+        "post",
+        `/my-tasks/${selectedTask.value._id}/submit`,
+    );
+
+    if (err) {
+        toast.error(err.message || "Failed to submit task completion");
+    } else {
+        const msg = res?.message?.trim() || "Task marked as completed.";
+        toast.success(msg);
+        hideBootstrapModal(completeModal);
+        fetchTasks();
+
+        // Reset form
+        completionData.value = { notes: '', file: null };
+        if (notesRef.value) notesRef.value.value = '';
+    }
+};
 
 const showDateRangePicker = () => {
     const today = new Date();
@@ -288,5 +468,10 @@ watch(filters, fetchTasks, { deep: true });
 .attachment-pdf:hover {
     background-color: #d4ebff;
     text-decoration: none;
+}
+
+.bg-submitted {
+    background-color: #e0e7ff !important;
+    color: #1d4ed8 !important;
 }
 </style>

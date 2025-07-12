@@ -211,7 +211,7 @@
                   'badge d-inline-flex align-items-center gap-1 rounded-pill fw-semibold small',
                   task.status === 'pending' ? 'bg-warning text-dark' :
                     task.status === 'in_progress' ? 'bg-primary text-white' :
-                      task.status === 'submitted' ? 'bg-purple text-white' :
+                      task.status === 'submitted' ? 'bg-submitted' :
                         task.status === 'verified' ? 'bg-success text-white' :
                           task.status === 'cancelled' ? 'bg-danger text-white' :
                             task.status === 'due' ? 'bg-dark text-white' :
@@ -742,5 +742,10 @@ input[readonly] {
 .multiselect__tags {
   min-height: 38px !important;
   padding: 5px 8px !important;
+}
+
+.bg-submitted {
+  background-color: #e0e7ff !important;
+  color: #1d4ed8 !important;
 }
 </style>

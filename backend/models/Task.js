@@ -27,6 +27,8 @@ const taskSchema = new mongoose.Schema(
     dueDate: { type: Date, required: true },
     completedAt: { type: Date },
     fileUrl: { type: String, default: null },
+    submissionNotes: { type: String, default: '' },
+    submissionFileUrl: { type: String, default: null },
   },
   { timestamps: true }
 );

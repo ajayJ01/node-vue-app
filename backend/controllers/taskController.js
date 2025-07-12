@@ -1,5 +1,5 @@
 const Task = require("../models/Task");
-const { success, error, notFound } = require("../utils/response");
+const { success, error, notFound, conflict } = require("../utils/response");
 const { uploadFile } = require("../utils/fileUpload");
 
 exports.createTask = async (req, reply) => {
@@ -49,8 +49,8 @@ exports.createTask = async (req, reply) => {
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
       : assignedTo
-      ? [assignedTo]
-      : [];
+        ? [assignedTo]
+        : [];
 
     let fileUrl = null;
 
@@ -311,6 +311,61 @@ exports.cancelTask = async (req, reply) => {
     return success(reply, "Task cancelled successfully", task);
   } catch (err) {
     console.error("Cancel Task Error:", err);
+    return error(reply);
+  }
+};
+
+exports.startTask = async (req, reply) => {
+  try {
+    const taskId = req.params.id;
+
+    const task = await Task.findOne({ _id: taskId });
+
+    if (!task) {
+      return notFound(reply, "Task not found");
+    }
+
+    if (task.status !== "pending") {
+      return conflict(reply, "Only pending tasks can be started");
+    }
+
+    task.status = "in_progress";
+    task.updatedAt = new Date();
+    await task.save();
+
+    return success(reply, "Task marked as in progress", task);
+  } catch (err) {
+    console.error("Start Task Error:", err);
+    return error(reply);
+  }
+};
+
+exports.submitTask = async (req, reply) => {
+  try {
+    const taskId = req.params.id;
+    const { notes } = req.body;
+    const file = req.file;
+
+    const task = await Task.findOne({ _id: taskId });
+
+    if (!task) {
+      return notFound(reply, "Task not found");
+    }
+
+    if (task.status !== "in_progress" && task.status !== "pending") {
+      return conflict(reply, "Only in-progress and pending tasks can be submitted");
+    }
+
+    task.status = "submitted";
+    task.completionNotes = notes;
+    if (file) {
+      task.submissionFileUrl = "/uploads/" + file.filename;
+    }
+    task.completedAt = new Date();
+    await task.save();
+
+    return success(reply, "Task submitted successfully", task);
+  } catch (err) {
     return error(reply);
   }
 };
