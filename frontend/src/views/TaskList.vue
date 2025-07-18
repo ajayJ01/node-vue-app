@@ -308,6 +308,7 @@ import Swal from 'sweetalert2';
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
 import { useExport } from "@/composables/useExport";
+import { validateFile } from "@/utils/validateFile";
 
 defineOptions({ components: { Multiselect } });
 
@@ -383,32 +384,13 @@ const handleFileChange = (event) => {
   const selected = event.target.files[0];
   if (!selected) return;
 
-  const validTypes = [
-    "application/pdf",
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-    "image/webp",
-  ];
-  const maxSizeMB = 5; // Max file size in MB
-
-  if (!validTypes.includes(selected.type)) {
-    const allowed = ["PDF", "PNG", "JPEG", "JPG", "WEBP"].join(", ");
-    toast.error(`Invalid file type. Allowed types: ${allowed}`);
-    file.value = null;
-    return;
-  }
-
-  const fileSizeMB = selected.size / (1024 * 1024);
-  if (fileSizeMB > maxSizeMB) {
-    toast.error(`File too large. Max allowed size is ${maxSizeMB}MB.`);
-    file.value = null;
-    return;
-  }
-
   file.value = selected;
+  const { valid, message } = validateFile(selected);
+  if (!valid) {
+    toast.error(message);
+    return;
+  }
 };
-
 
 const openCreateModal = () => {
   resetForm();
@@ -548,6 +530,14 @@ const handleTaskSubmit = async () => {
   if (originalTask && originalTask.status !== 'pending' && status.value === 'pending') {
     if (selectedDate < minAllowedDate) {
       toast.error("Due date & time must be at least 5 minutes in the future.");
+      return;
+    }
+  }
+
+  if (file.value) {
+    const result = validateFile(file.value);
+    if (!result.valid) {
+      toast.error(result.message);
       return;
     }
   }

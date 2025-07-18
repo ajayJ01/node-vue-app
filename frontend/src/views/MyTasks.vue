@@ -213,9 +213,15 @@
                             <textarea class="form-control" ref="notesRef" rows="3"
                                 placeholder="Enter any notes about task completion..."></textarea>
                         </div>
-                        <div class="mt-3">
-                            <label class="form-label fw-semibold">Upload Attachment (Optional)</label>
-                            <input type="file" class="form-control" @change="handleFileUpload" />
+                        <div class="mb-3 mt-3">
+                            <label for="completionFile" class="form-label fw-semibold">Upload Attachment
+                                (PDF/Image)</label>
+                            <input type="file" class="form-control" id="completionFile" ref="completionFileInput"
+                                name="file" accept=".pdf,image/*" @change="handleFileUpload" />
+                            <!-- Show selected file name -->
+                            <div v-if="completionFile?.name" class="text-success small mt-1">Selected: {{
+                                completionFile.name }}
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -237,6 +243,9 @@ import { useToast } from "@/composables/useToast";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
 import { hideBootstrapModal, showBootstrapModal } from "@/utils/bootstrapModal.js";
+import { validateFile } from "@/utils/validateFile";
+const completionFile = ref(null);
+const completionFileInput = ref(null);
 
 const toast = useToast();
 const tasks = ref([]);
@@ -277,31 +286,17 @@ const markTaskStarted = async (task) => {
     }
 };
 
-const handleFileUpload = e => {
-
-    const selected = e.target.files[0];
+const handleFileUpload = (event) => {
+    const selected = event.target.files[0];
     if (!selected) return;
 
-    const validTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "image/webp",
-    ];
-    const maxSizeMB = 5; // Max file size in MB
-
-    if (!validTypes.includes(selected.type)) {
-        const allowed = ["PDF", "PNG", "JPEG", "JPG", "WEBP"].join(", ");
-        toast.error(`Invalid file type. Allowed types: ${allowed}`);
-        file.value = null;
-        return;
-    }
-
-    const fileSizeMB = selected.size / (1024 * 1024);
-    if (fileSizeMB > maxSizeMB) {
-        toast.error(`File too large. Max allowed size is ${maxSizeMB}MB.`);
-        file.value = null;
+    const { valid, message } = validateFile(selected);
+    if (!valid) {
+        toast.error(message);
+        if (completionFileInput.value) {
+            completionFileInput.value.value = "";
+        }
+        completionData.value.file = null;
         return;
     }
 
@@ -323,10 +318,7 @@ const submitCompletion = async () => {
         formData.append("file", completionData.value.file);
     }
 
-    const [res, err] = await request(
-        "post",
-        `/my-tasks/${selectedTask.value._id}/submit`,
-    );
+    const [res, err] = await request("post", `/my-tasks/${selectedTask.value._id}/submit`, formData);
 
     if (err) {
         toast.error(err.message || "Failed to submit task completion");
@@ -339,6 +331,7 @@ const submitCompletion = async () => {
         // Reset form
         completionData.value = { notes: '', file: null };
         if (notesRef.value) notesRef.value.value = '';
+        if (completionFileInput.value) completionFileInput.value.value = '';
     }
 };
 

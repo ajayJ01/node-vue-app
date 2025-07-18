@@ -12,11 +12,9 @@ exports.createTask = async (req, reply) => {
     const formData = {};
     let filePartData = null;
 
-    // Iterate and process all multipart parts (fields and files)
-    // This ensures all incoming stream data is consumed, preventing hangs.
+
     for await (const part of parts) {
       if (part.file && part.fieldname === "file") {
-        // Buffer the file stream to ensure full consumption
         const buffer = await part.toBuffer();
 
         filePartData = {
@@ -54,7 +52,6 @@ exports.createTask = async (req, reply) => {
 
     let fileUrl = null;
 
-    // Process file upload if a file was provided
     if (filePartData) {
       fileUrl = await uploadFile(filePartData, {
         folder: "uploads/tasks",
@@ -122,8 +119,8 @@ exports.updateTask = async (req, reply) => {
     const assignedList = Array.isArray(assignedTo)
       ? assignedTo
       : assignedTo
-      ? [assignedTo]
-      : [];
+        ? [assignedTo]
+        : [];
 
     let fileUrl = null;
     if (filePartData) {
@@ -342,12 +339,43 @@ exports.startTask = async (req, reply) => {
 
 exports.submitTask = async (req, reply) => {
   try {
+    if (!req.isMultipart()) {
+      return reply.status(400).send({ message: "Request is not multipart" });
+    }
+
     const taskId = req.params.id;
-    const { notes } = req.body;
-    const file = req.file;
+    const formData = {};
+    let filePartData = null;
 
-    const task = await Task.findOne({ _id: taskId });
+    const parts = req.parts();
+    for await (const part of parts) {
+      if (part.file && part.fieldname === "file") {
+        const buffer = await part.toBuffer();
+        filePartData = {
+          fieldname: part.fieldname,
+          filename: part.filename,
+          mimetype: part.mimetype,
+          encoding: part.encoding,
+          buffer: buffer,
+        };
+      } else if (part.type === "field") {
+        if (formData[part.fieldname]) {
+          if (Array.isArray(formData[part.fieldname])) {
+            formData[part.fieldname].push(part.value);
+          } else {
+            formData[part.fieldname] = [formData[part.fieldname], part.value];
+          }
+        } else {
+          formData[part.fieldname] = part.value;
+        }
+      } else if (part.file) {
+        await part.toBuffer();
+      }
+    }
 
+    const { notes } = formData;
+
+    const task = await Task.findById(taskId);
     if (!task) {
       return notFound(reply, "Task not found");
     }
@@ -356,16 +384,24 @@ exports.submitTask = async (req, reply) => {
       return conflict(reply, "Only in-progress and pending tasks can be submitted");
     }
 
-    task.status = "submitted";
-    task.completionNotes = notes;
-    if (file) {
-      task.submissionFileUrl = "/uploads/" + file.filename;
+    let submissionFileUrl = null;
+    if (filePartData) {
+      submissionFileUrl = await uploadFile(filePartData, {
+        folder: "uploads/tasks/completions",
+        allowedExtensions: [".pdf", ".png", ".jpg", ".jpeg", ".webp"],
+        maxSizeMB: 5,
+      });
     }
+
+    task.status = "submitted";
+    task.submissionNotes = notes;
+    task.submissionFileUrl = submissionFileUrl;
     task.completedAt = new Date();
     await task.save();
 
     return success(reply, "Task submitted successfully", task);
   } catch (err) {
-    return error(reply);
+    console.error("🚨 submitTask error:", err);
+    return error(reply, "Failed to submit task", err.message);
   }
 };
